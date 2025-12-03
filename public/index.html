@@ -4154,8 +4154,6 @@
                 return;
             }
             
-            const modalBody = document.getElementById('modalBody');
-            
             // Hole Preis aus Dateiname
             const currentImage = auktionImages[auktionCurrentRound - 1];
             const solution = currentImage.price;
@@ -4165,7 +4163,7 @@
                 return;
             }
             
-            // Berechne Abstände
+            // Berechne Abstände für Info
             const playerEstimates = Array.from(auktionEstimateData.entries())
                 .filter(([name]) => name !== 'QuizDisplay' && name !== 'Moderator')
                 .map(([name, estimate]) => ({
@@ -4180,85 +4178,100 @@
                 return;
             }
             
-            // Finde Gewinner
-            const minDiff = playerEstimates[0].difference;
-            const winners = playerEstimates.filter(p => p.difference === minDiff);
+            const modalBody = document.getElementById('modalBody');
             
             modalBody.innerHTML = `
                 <div class="config-section" style="text-align: center; padding: 60px;">
-                    <h2 style="font-size: 2.5rem; margin-bottom: 40px; color: #ffffff;">🏆 Rundengewinner</h2>
+                    <h2 style="font-size: 2.5rem; margin-bottom: 30px; color: #ffffff;">🏆 Punkte vergeben</h2>
                     
-                    <div style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
-                        <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">Verkaufspreis:</div>
-                        <div style="font-size: 3rem; font-weight: 700; color: #22c55e;">
+                    <div style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 16px; padding: 25px; margin-bottom: 30px;">
+                        <div style="font-size: 1.2rem; color: rgba(255,255,255,0.8); margin-bottom: 10px;">Verkaufspreis:</div>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: #22c55e;">
                             ${solution.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
                         </div>
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
-                        <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">
-                            ${winners.length > 1 ? 'Gewinner (Gleichstand):' : 'Gewinner:'}
-                        </div>
-                        ${winners.map(w => `
-                            <div style="font-size: 2.5rem; font-weight: 700; color: #fbbf24; margin: 10px 0;">
-                                🏆 ${w.name}
-                            </div>
-                        `).join('')}
-                        <div style="font-size: 1.1rem; color: rgba(255,255,255,0.7); margin-top: 15px;">
-                            Nur ${minDiff.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben!
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 30px;">
+                        <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: #ffffff;">Wähle Gewinner (Mehrfachauswahl möglich):</h3>
+                        <div id="auktionWinnerCheckboxes" style="max-height: 400px; overflow-y: auto;">
+                            ${playerEstimates.map((p, index) => `
+                                <label style="
+                                    display: flex; 
+                                    justify-content: space-between; 
+                                    align-items: center; 
+                                    padding: 15px 20px; 
+                                    background: ${index === 0 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 255, 255, 0.05)'}; 
+                                    border-radius: 12px; 
+                                    margin-bottom: 10px; 
+                                    border: 2px solid ${index === 0 ? 'rgba(251, 191, 36, 0.4)' : 'rgba(255,255,255,0.1)'};
+                                    cursor: pointer;
+                                    transition: all 0.3s ease;
+                                " 
+                                onmouseover="this.style.background='${index === 0 ? 'rgba(251, 191, 36, 0.25)' : 'rgba(255, 255, 255, 0.1)'}'"
+                                onmouseout="this.style.background='${index === 0 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 255, 255, 0.05)'}'">
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <input type="checkbox" id="winner_${p.name}" value="${p.name}" ${index === 0 ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 1.2rem; color: #ffffff;">
+                                                ${index < 3 ? ['🥇', '🥈', '🥉'][index] : '👤'} ${p.name}
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">
+                                                ${p.difference.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; font-size: 1.2rem; color: #fbbf24;">
+                                            ${p.estimate.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                                        </div>
+                                    </div>
+                                </label>
+                            `).join('')}
                         </div>
                     </div>
                     
-                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
-                        <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: #ffffff;">Alle Schätzungen:</h3>
-                        ${playerEstimates.map((p, index) => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: ${index === 0 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border-radius: 12px; margin-bottom: 10px; border: 2px solid ${index === 0 ? '#fbbf24' : 'rgba(255,255,255,0.1)'};">
-                                <span style="font-weight: 700; font-size: 1.2rem; color: #ffffff;">
-                                    ${index < 3 ? ['🥇', '🥈', '🥉'][index] : '👤'} ${p.name}
-                                </span>
-                                <div style="text-align: right;">
-                                    <div style="font-weight: 700; font-size: 1.2rem; color: #fbbf24;">
-                                        ${p.estimate.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
-                                    </div>
-                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6);">
-                                        ${p.difference.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                        ${winners.map(w => `
-                            <button class="save-config-btn" onclick="finishAuktionRound('${w.name.replace(/'/g, "\\'")}')">
-                                ✓ ${w.name} bekommt Punkt
-                            </button>
-                        `).join('')}
-                    </div>
+                    <button class="save-config-btn" onclick="confirmAuktionWinners()" style="font-size: 1.2rem; padding: 18px 50px;">
+                        ✓ Punkte vergeben & weiter
+                    </button>
                 </div>
             `;
         }
-
-        function finishAuktionRound(winnerName) {
-            // Punkt vergeben
-            const winner = auktionPlayers.find(p => p.name === winnerName);
-            if (winner) {
-                winner.score++;
+        
+        function confirmAuktionWinners() {
+            // Sammle alle ausgewählten Gewinner
+            const checkboxes = document.querySelectorAll('#auktionWinnerCheckboxes input[type="checkbox"]:checked');
+            const winners = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (winners.length === 0) {
+                alert('⚠️ Bitte wähle mindestens einen Gewinner aus!');
+                return;
             }
             
-            // Historie speichern
-            auktionRoundHistory.push({ winner: winnerName });
+            // Vergebe Punkte an alle Gewinner
+            winners.forEach(winnerName => {
+                const player = auktionPlayers.find(p => p.name === winnerName);
+                if (player) {
+                    player.score++;
+                }
+            });
             
-            // Nächste Runde oder Ende
+            // Speichere in Historie
+            auktionRoundHistory.push({ 
+                winner: winners.length === 1 ? winners[0] : winners.join(', ')
+            });
+            
+            // Prüfe ob letzte Runde
             if (auktionCurrentRound >= auktionImages.length) {
                 showAuktionFinalResults();
             } else {
+                // Nächste Runde
                 auktionCurrentRound++;
                 auktionEstimateData.clear();
                 auktionShowSolution = false;
                 showAuktionRound();
             }
         }
+
 
         function showAuktionFinalResults() {
             // Disconnect von Buzzer
