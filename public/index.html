@@ -853,9 +853,9 @@
         .game-player-item {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 10px 12px;
-            margin-bottom: 8px;
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-bottom: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -870,13 +870,13 @@
         .game-player-name {
             color: #ffffff;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
         }
 
         .game-player-score {
             color: #7c3aed;
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
         }
 
         /* Rundengewinner Auswahl */
@@ -1928,57 +1928,57 @@
                 <div id="gameView" style="display: none;">
                     <div style="display: flex; gap: 20px; height: 100%;">
                         <!-- Linke Sidebar mit Infos und Controls -->
-                        <div style="width: 350px; display: flex; flex-direction: column; gap: 15px;">
+                        <div style="width: 350px; display: flex; flex-direction: column; gap: 10px;">
                             <!-- Rundeninformation -->
-                            <div class="info-card">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">📊 Spielinfo</h3>
-                                <div class="info-row">
+                            <div class="info-card" style="padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">📊 Spielinfo</h3>
+                                <div class="info-row" style="font-size: 0.85rem;">
                                     <span class="info-label">Aktuelle Runde:</span>
                                     <span class="info-value" id="currentRound">1</span> / <span id="totalRounds">0</span>
                                 </div>
-                                <div class="info-row">
+                                <div class="info-row" style="font-size: 0.85rem;">
                                     <span class="info-label">Verbleibende Zeit:</span>
                                     <span class="info-value timer-value" id="timer">30</span>s
                                 </div>
-                                <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <div class="info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem;">
                                     <span class="info-label">🔔 Buzzer Room:</span>
                                     <span class="info-value" style="color: #fbbf24;">WERBINICH</span>
                                 </div>
                             </div>
 
                             <!-- BUZZER ANZEIGE -->
-                            <div class="info-card" id="werBinIchBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3);">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🔔 Buzzer</h3>
-                                <div id="werBinIchBuzzerDisplay" style="text-align: center; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 15px;">
-                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-bottom: 8px;">Warte auf Buzz...</div>
-                                    <div id="werBinIchBuzzerName" style="font-size: 1.8rem; font-weight: 700; color: #fbbf24; min-height: 40px;"></div>
+                            <div class="info-card" id="werBinIchBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">🔔 Buzzer</h3>
+                                <div id="werBinIchBuzzerDisplay" style="text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px;">
+                                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-bottom: 4px;">Warte auf Buzz...</div>
+                                    <div id="werBinIchBuzzerName" style="font-size: 1.2rem; font-weight: 700; color: #fbbf24; min-height: 25px;"></div>
                                 </div>
-                                <button class="control-btn-full" onclick="resetWerBinIchBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
-                                    🔄 Buzzer zurücksetzen
+                                <button class="control-btn-full" onclick="resetWerBinIchBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 8px; font-size: 0.85rem;">
+                                    🔄 Zurücksetzen
                                 </button>
                             </div>
 
                             <!-- Controls -->
-                            <div class="info-card">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🎮 Steuerung</h3>
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <button class="control-btn-full" onclick="pauseGame()" id="pauseBtn">
+                            <div class="info-card" style="padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">🎮 Steuerung</h3>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <button class="control-btn-full" onclick="pauseGame()" id="pauseBtn" style="padding: 8px; font-size: 0.85rem;">
                                         ⏸️ Pause
                                     </button>
-                                    <button class="control-btn-full" onclick="resetRound()">
+                                    <button class="control-btn-full" onclick="resetRound()" style="padding: 8px; font-size: 0.85rem;">
                                         🔄 Runde neu starten
                                     </button>
-                                    <button class="control-btn-full danger" onclick="endGame()">
+                                    <button class="control-btn-full danger" onclick="endGame()" style="padding: 8px; font-size: 0.85rem;">
                                         🏁 Spiel beenden
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Spieler und Punkte -->
-                            <div class="info-card">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">👥 Spieler</h3>
+                            <div class="info-card" style="padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">👥 Spieler</h3>
                                 <div id="gamePlayersList">
-                                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">
+                                    <div style="text-align: center; padding: 12px; color: rgba(255, 255, 255, 0.5); font-size: 0.8rem;">
                                         Keine Spieler ausgewählt
                                     </div>
                                 </div>
@@ -2705,48 +2705,48 @@
                 <!-- Spiel-Ansicht -->
                 <div id="gameView" style="display: none;">
                     <div style="display: flex; gap: 20px; height: 100%;">
-                        <div style="width: 350px; display: flex; flex-direction: column; gap: 15px;">
-                            <div class="info-card">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">📊 Spielinfo</h3>
-                                <div class="info-row">
+                        <div style="width: 350px; display: flex; flex-direction: column; gap: 10px;">
+                            <div class="info-card" style="padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">📊 Spielinfo</h3>
+                                <div class="info-row" style="font-size: 0.85rem;">
                                     <span class="info-label">Aktuelle Runde:</span>
                                     <span class="info-value" id="currentRound">1</span> / <span id="totalRounds">0</span>
                                 </div>
-                                <div class="info-row">
+                                <div class="info-row" style="font-size: 0.85rem;">
                                     <span class="info-label">Verbleibende Zeit:</span>
                                     <span class="info-value timer-value" id="timer">30</span>s
                                 </div>
-                                <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <div class="info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem;">
                                     <span class="info-label">🔔 Buzzer Room:</span>
                                     <span class="info-value" style="color: #fbbf24;">WERBINICH</span>
                                 </div>
                             </div>
 
                             <!-- BUZZER ANZEIGE -->
-                            <div class="info-card" id="werBinIchBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3);">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🔔 Buzzer</h3>
-                                <div id="werBinIchBuzzerDisplay" style="text-align: center; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 15px;">
-                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-bottom: 8px;">Warte auf Buzz...</div>
-                                    <div id="werBinIchBuzzerName" style="font-size: 1.8rem; font-weight: 700; color: #fbbf24; min-height: 40px;"></div>
+                            <div class="info-card" id="werBinIchBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">🔔 Buzzer</h3>
+                                <div id="werBinIchBuzzerDisplay" style="text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px;">
+                                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-bottom: 4px;">Warte auf Buzz...</div>
+                                    <div id="werBinIchBuzzerName" style="font-size: 1.2rem; font-weight: 700; color: #fbbf24; min-height: 25px;"></div>
                                 </div>
-                                <button class="control-btn-full" onclick="resetWerBinIchBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
-                                    🔄 Buzzer zurücksetzen
+                                <button class="control-btn-full" onclick="resetWerBinIchBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 8px; font-size: 0.85rem;">
+                                    🔄 Zurücksetzen
                                 </button>
                             </div>
 
-                            <div class="info-card">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🎮 Steuerung</h3>
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <button class="control-btn-full" onclick="pauseGame()" id="pauseBtn">⏸️ Pause</button>
-                                    <button class="control-btn-full" onclick="resetRound()">🔄 Runde neu starten</button>
-                                    <button class="control-btn-full danger" onclick="endGame()">🏁 Spiel beenden</button>
+                            <div class="info-card" style="padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">🎮 Steuerung</h3>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <button class="control-btn-full" onclick="pauseGame()" id="pauseBtn" style="padding: 8px; font-size: 0.85rem;">⏸️ Pause</button>
+                                    <button class="control-btn-full" onclick="resetRound()" style="padding: 8px; font-size: 0.85rem;">🔄 Runde neu starten</button>
+                                    <button class="control-btn-full danger" onclick="endGame()" style="padding: 8px; font-size: 0.85rem;">🏁 Spiel beenden</button>
                                 </div>
                             </div>
 
-                            <div class="info-card">
-                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">👥 Spieler</h3>
+                            <div class="info-card" style="padding: 12px;">
+                                <h3 style="margin-bottom: 8px; font-size: 1rem;">👥 Spieler</h3>
                                 <div id="gamePlayersList">
-                                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">
+                                    <div style="text-align: center; padding: 12px; color: rgba(255, 255, 255, 0.5); font-size: 0.8rem;">
                                         Keine Spieler ausgewählt
                                     </div>
                                 </div>
@@ -2942,8 +2942,9 @@
                     
                     if (data.type === 'buzz') {
                         // Jemand hat gebuzzert!
-                        werBinIchBuzzedPlayer = data.name;
-                        console.log(`🔔 ${data.name} hat gebuzzert!`);
+                        const playerName = data.player || data.name || 'Unbekannt';
+                        werBinIchBuzzedPlayer = playerName;
+                        console.log(`🔔 ${playerName} hat gebuzzert!`);
                         
                         // Pausiere das Spiel
                         if (!isPaused) {
@@ -2951,7 +2952,11 @@
                         }
                         
                         // Highlight Spieler
-                        highlightBuzzedPlayer(data.name);
+                        highlightBuzzedPlayer(playerName);
+                    } else if (data.type === 'reset') {
+                        // Reset von Buzzer-App empfangen
+                        console.log('🔄 Reset von Buzzer-App empfangen');
+                        resetWerBinIchBuzzer();
                     }
                 } catch (e) {
                     console.error('Fehler beim Parsen der Buzzer-Nachricht:', e);
@@ -3022,6 +3027,15 @@
                 item.style.transform = '';
                 item.style.boxShadow = '';
             });
+            
+            // SENDE RESET AN BUZZER-APP
+            if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
+                werBinIchBuzzerWs.send(JSON.stringify({
+                    type: 'reset',
+                    room: werBinIchRoomCode
+                }));
+                console.log('📤 Reset an Buzzer-App gesendet');
+            }
             
             console.log('🔄 Buzzer zurückgesetzt');
         }
