@@ -3865,6 +3865,9 @@
                                         <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
                                             R${index + 1}: ${round.winner || 'Niemand'}
                                         </span>
+                                        <button onclick="editAuktionRoundWinner(${index})" style="background: rgba(124, 58, 237, 0.3); border: 1px solid rgba(124, 58, 237, 0.5); border-radius: 6px; color: white; padding: 4px 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.3s ease;">
+                                            ✏️
+                                        </button>
                                     </div>
                                 `).join('')}
                             </div>
@@ -4270,6 +4273,100 @@
                 auktionShowSolution = false;
                 showAuktionRound();
             }
+        }
+        
+        function editAuktionRoundWinner(roundIndex) {
+            const round = auktionRoundHistory[roundIndex];
+            const currentWinners = round.winner.split(', ');
+            
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <div class="config-section" style="text-align: center; padding: 40px 30px;">
+                    <h2 style="font-size: 1.8rem; margin-bottom: 20px; color: #ffffff;">✏️ Runde ${roundIndex + 1} bearbeiten</h2>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 1.05rem; margin-bottom: 15px; color: #ffffff;">Aktueller Gewinner: ${round.winner}</h3>
+                        <p style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 15px;">Wähle neue(n) Gewinner (Mehrfachauswahl möglich):</p>
+                        
+                        <div id="editAuktionWinnerCheckboxes" style="max-height: 300px; overflow-y: auto;">
+                            ${auktionPlayers.map((player) => {
+                                const isCurrentWinner = currentWinners.includes(player.name);
+                                return `
+                                    <label style="
+                                        display: flex; 
+                                        justify-content: space-between; 
+                                        align-items: center; 
+                                        padding: 10px 15px; 
+                                        background: ${isCurrentWinner ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 255, 255, 0.05)'}; 
+                                        border-radius: 8px; 
+                                        margin-bottom: 8px; 
+                                        border: 1.5px solid ${isCurrentWinner ? 'rgba(251, 191, 36, 0.4)' : 'rgba(255,255,255,0.1)'};
+                                        cursor: pointer;
+                                        transition: all 0.3s ease;
+                                    " 
+                                    onmouseover="this.style.background='${isCurrentWinner ? 'rgba(251, 191, 36, 0.25)' : 'rgba(255, 255, 255, 0.1)'}'"
+                                    onmouseout="this.style.background='${isCurrentWinner ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 255, 255, 0.05)'}'">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <input type="checkbox" value="${player.name}" ${isCurrentWinner ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
+                                            <div style="font-weight: 700; font-size: 0.95rem; color: #ffffff;">
+                                                👤 ${player.name}
+                                            </div>
+                                        </div>
+                                        <div style="font-weight: 700; font-size: 0.95rem; color: #fbbf24;">
+                                            ${player.score} Punkte
+                                        </div>
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="save-config-btn" onclick="saveAuktionRoundEdit(${roundIndex})" style="font-size: 0.95rem; padding: 12px 30px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+                            ✓ Änderungen speichern
+                        </button>
+                        <button class="save-config-btn" onclick="showAuktionRound()" style="font-size: 0.95rem; padding: 12px 30px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                            ✕ Abbrechen
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function saveAuktionRoundEdit(roundIndex) {
+            const checkboxes = document.querySelectorAll('#editAuktionWinnerCheckboxes input[type="checkbox"]:checked');
+            const newWinners = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (newWinners.length === 0) {
+                alert('⚠️ Bitte wähle mindestens einen Gewinner aus!');
+                return;
+            }
+            
+            const round = auktionRoundHistory[roundIndex];
+            const oldWinners = round.winner.split(', ');
+            
+            // Entferne Punkte von alten Gewinnern
+            oldWinners.forEach(winnerName => {
+                const player = auktionPlayers.find(p => p.name === winnerName);
+                if (player && player.score > 0) {
+                    player.score--;
+                }
+            });
+            
+            // Gebe Punkte an neue Gewinner
+            newWinners.forEach(winnerName => {
+                const player = auktionPlayers.find(p => p.name === winnerName);
+                if (player) {
+                    player.score++;
+                }
+            });
+            
+            // Aktualisiere Historie
+            round.winner = newWinners.length === 1 ? newWinners[0] : newWinners.join(', ');
+            
+            // Zurück zur Rundensicht
+            showAuktionRound();
         }
 
 
