@@ -5280,7 +5280,21 @@
                         </div>
 
                         <div style="margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
-                            <button class="control-btn-full" onclick="toggleSolution()" id="solutionButton" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: 2px solid rgba(34, 197, 94, 0.5);">
+                            <button onclick="toggleSolution()" id="solutionButton" style="
+                                background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
+                                border: 2px solid rgba(34, 197, 94, 0.5);
+                                color: white;
+                                padding: 12px 24px;
+                                border-radius: 12px;
+                                font-size: 1rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 8px;
+                            ">
                                 💡 Lösung anzeigen
                             </button>
                             <button class="next-round-btn" onclick="showEstimateWinnerSelection()">
@@ -5932,6 +5946,12 @@
             const modal = document.getElementById('gameModal');
             modal.classList.remove('active');
             
+            // Disconnect von Buzzer-App wenn verbunden
+            if (typeof disconnectBuzzerApp === 'function') {
+                disconnectBuzzerApp();
+                console.log('🔌 QuizDisplay disconnected beim Schließen');
+            }
+            
             // Stoppe alle laufenden Animationen
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
@@ -6572,13 +6592,38 @@ function resetEstimates() {
 
 // Verbindung trennen
 function disconnectBuzzerApp() {
-    if (buzzerWs) {
+    if (buzzerWs && buzzerWs.readyState === 1) {
+        // Sende Leave-Message vor dem Disconnect
+        try {
+            buzzerWs.send(JSON.stringify({
+                type: 'guessing_leave',
+                room: currentRoomCode
+            }));
+            console.log('📤 QuizDisplay verlässt Room:', currentRoomCode);
+        } catch (error) {
+            console.warn('⚠️ Konnte Leave-Message nicht senden:', error);
+        }
+        
         buzzerWs.close();
-        buzzerWs = null;
-        estimateData.clear();
-        updateEstimateDisplay();
-        console.log('👋 Verbindung getrennt');
     }
+    
+    // Cleanup
+    buzzerWs = null;
+    estimateData.clear();
+    showSolution = false;
+    
+    // Cleane Timeouts
+    if (autoAnswerTimeout) {
+        clearTimeout(autoAnswerTimeout);
+        autoAnswerTimeout = null;
+    }
+    if (autoReadyTimeout) {
+        clearTimeout(autoReadyTimeout);
+        autoReadyTimeout = null;
+    }
+    
+    updateEstimateDisplay();
+    console.log('👋 QuizDisplay disconnected');
 }
 
 // Room Code ändern
