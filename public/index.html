@@ -1961,7 +1961,7 @@
                             <!-- Spieler und Punkte -->
                             <div class="info-card">
                                 <h3 style="margin-bottom: 15px; font-size: 1.3rem;">👥 Spieler</h3>
-                                <div id="gamePlayersList" style="max-height: 300px; overflow-y: auto;">
+                                <div id="gamePlayersList">
                                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">
                                         Keine Spieler ausgewählt
                                     </div>
@@ -2193,6 +2193,11 @@
         
         // NUR BLUR-EFFEKT in jeder Runde
         let currentEffect = 'blur';
+        
+        // BUZZER INTEGRATION
+        let werBinIchBuzzerWs = null;
+        let werBinIchRoomCode = 'WERBINICH';
+        let werBinIchBuzzedPlayer = null; // Wer hat gebuzzert?
 
         // ========================================
         // SPIEL 2: Cantina Band (Audio Quiz)
@@ -2695,6 +2700,10 @@
                                     <span class="info-label">Verbleibende Zeit:</span>
                                     <span class="info-value timer-value" id="timer">30</span>s
                                 </div>
+                                <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <span class="info-label">🔔 Buzzer Room:</span>
+                                    <span class="info-value" style="color: #fbbf24;">WERBINICH</span>
+                                </div>
                             </div>
 
                             <div class="info-card">
@@ -2708,7 +2717,7 @@
 
                             <div class="info-card">
                                 <h3 style="margin-bottom: 15px; font-size: 1.3rem;">👥 Spieler</h3>
-                                <div id="gamePlayersList" style="max-height: 300px; overflow-y: auto;">
+                                <div id="gamePlayersList">
                                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">
                                         Keine Spieler ausgewählt
                                     </div>
@@ -2872,8 +2881,86 @@
             document.getElementById('gameView').style.display = 'block';
             document.getElementById('totalRounds').textContent = uploadedImages.length;
             
+            // VERBINDE MIT BUZZER
+            connectWerBinIchBuzzer();
+            
             updateGamePlayersList();
             startRound();
+        }
+        
+        // Verbinde mit Buzzer-App
+        function connectWerBinIchBuzzer() {
+            if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
+                console.log('Buzzer bereits verbunden');
+                return;
+            }
+            
+            werBinIchBuzzerWs = new WebSocket('wss://jeans.up.railway.app');
+            
+            werBinIchBuzzerWs.onopen = () => {
+                console.log('🔌 Buzzer verbunden!');
+                // Trete Room bei
+                werBinIchBuzzerWs.send(JSON.stringify({
+                    type: 'join',
+                    room: werBinIchRoomCode,
+                    name: 'QuizDisplay'
+                }));
+            };
+            
+            werBinIchBuzzerWs.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📩 Buzzer Nachricht:', data);
+                    
+                    if (data.type === 'buzz') {
+                        // Jemand hat gebuzzert!
+                        werBinIchBuzzedPlayer = data.name;
+                        console.log(`🔔 ${data.name} hat gebuzzert!`);
+                        
+                        // Pausiere das Spiel
+                        if (!isPaused) {
+                            pauseGame();
+                        }
+                        
+                        // Highlight Spieler
+                        highlightBuzzedPlayer(data.name);
+                    }
+                } catch (e) {
+                    console.error('Fehler beim Parsen der Buzzer-Nachricht:', e);
+                }
+            };
+            
+            werBinIchBuzzerWs.onerror = (error) => {
+                console.error('Buzzer Fehler:', error);
+            };
+            
+            werBinIchBuzzerWs.onclose = () => {
+                console.log('🔌 Buzzer getrennt');
+                werBinIchBuzzerWs = null;
+            };
+        }
+        
+        // Highlight gebuzzerten Spieler
+        function highlightBuzzedPlayer(playerName) {
+            const container = document.getElementById('gamePlayersList');
+            const playerItems = container.querySelectorAll('.game-player-item');
+            
+            playerItems.forEach(item => {
+                const nameElement = item.querySelector('.game-player-name');
+                if (nameElement && nameElement.textContent === playerName) {
+                    // Highlight mit Animation
+                    item.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
+                    item.style.transform = 'scale(1.05)';
+                    item.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.5)';
+                    
+                    // Nach 3 Sekunden zurücksetzen
+                    setTimeout(() => {
+                        item.style.background = '';
+                        item.style.transform = '';
+                        item.style.boxShadow = '';
+                    }, 3000);
+                }
+            });
         }
 
         // Spielerliste im Spiel aktualisieren
@@ -3081,6 +3168,17 @@
 
         // Endergebnis anzeigen
         function showFinalResults() {
+            // DISCONNECT VON BUZZER
+            if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
+                werBinIchBuzzerWs.send(JSON.stringify({
+                    type: 'leave',
+                    room: werBinIchRoomCode
+                }));
+                werBinIchBuzzerWs.close();
+                werBinIchBuzzerWs = null;
+                console.log('🔌 Buzzer getrennt (Spiel beendet)');
+            }
+            
             const container = document.getElementById('finalResultsList');
             
             // Sortiere Spieler nach Punkten
