@@ -2193,6 +2193,11 @@
         let lastUpdate = Date.now();
         let animationFrameId = null;
         let gamePlayers = []; // Spieler im aktuellen Spiel mit eigenen Punkten
+        
+        // NEUE EFFEKT-SYSTEM
+        let availableEffects = ['blur', 'zoom', 'combo']; // 3 Effekte
+        let roundEffects = []; // Speichert welcher Effekt für welche Runde
+        let currentEffect = 'blur'; // Aktueller Effekt
 
         // ========================================
         // SPIEL 2: Cantina Band (Audio Quiz)
@@ -2864,6 +2869,14 @@
                 gameScore: 0
             }));
 
+            // GENERIERE ZUFÄLLIGE EFFEKTE FÜR JEDE RUNDE
+            roundEffects = [];
+            for (let i = 0; i < uploadedImages.length; i++) {
+                const randomEffect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
+                roundEffects.push(randomEffect);
+            }
+            console.log('🎨 Zufällige Effekte generiert:', roundEffects);
+
             currentRoundIndex = 0;
             document.getElementById('uploadView').style.display = 'none';
             document.getElementById('startView').style.display = 'none';
@@ -2904,6 +2917,10 @@
                 endGame();
                 return;
             }
+
+            // SETZE EFFEKT FÜR DIESE RUNDE
+            currentEffect = roundEffects[currentRoundIndex];
+            console.log(`🎨 Runde ${currentRoundIndex + 1}: Effekt = ${currentEffect}`);
 
             // Verstecke Overlay
             document.getElementById('roundCompleteOverlay').classList.remove('active');
@@ -2949,12 +2966,11 @@
             if (timeRemaining < 0) timeRemaining = 0;
             document.getElementById('timer').textContent = Math.ceil(timeRemaining);
 
-            // Berechne Pixelation (50 bei Start, 1 bei Ende)
+            // Berechne Progress (0 bei Start, 1 bei Ende)
             const progress = Math.min(1, (30 - timeRemaining) / 30);
-            currentPixelation = Math.max(1, Math.round(50 - (progress * 49)));
 
-            // Zeichne Bild mit aktuellem Pixelation
-            drawPixelatedImage(ctx, img, currentPixelation);
+            // Zeichne Bild mit aktuellem Effekt
+            drawImageWithEffect(ctx, img, currentEffect, progress);
 
             // Prüfe ob Runde vorbei ist
             if (timeRemaining <= 0) {
@@ -2966,6 +2982,59 @@
                 }
             } else {
                 animationFrameId = requestAnimationFrame(() => animateRound(ctx, img));
+            }
+        }
+
+        // NEUE FUNKTION: Zeichne Bild mit Effekt
+        function drawImageWithEffect(ctx, img, effect, progress) {
+            const canvas = ctx.canvas;
+            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+            const x = (canvas.width / 2) - (img.width / 2) * scale;
+            const y = (canvas.height / 2) - (img.height / 2) * scale;
+            const w = img.width * scale;
+            const h = img.height * scale;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            switch(effect) {
+                case 'blur':
+                    // Blur: 30px → 0px
+                    const blurAmount = Math.floor(30 * (1 - progress));
+                    ctx.filter = `blur(${blurAmount}px)`;
+                    ctx.drawImage(img, x, y, w, h);
+                    ctx.filter = 'none';
+                    break;
+
+                case 'zoom':
+                    // Zoom: 5x → 1x
+                    const zoom = 5 - (4 * progress);
+                    const zoomW = w * zoom;
+                    const zoomH = h * zoom;
+                    const zoomX = x + (w - zoomW) / 2;
+                    const zoomY = y + (h - zoomH) / 2;
+                    
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.scale(1 / zoom, 1 / zoom);
+                    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+                    ctx.drawImage(img, x * zoom, y * zoom, w * zoom, h * zoom);
+                    ctx.restore();
+                    break;
+
+                case 'combo':
+                    // Blur + Zoom: 20px blur + 3x zoom → 0px + 1x
+                    const comboBlur = Math.floor(20 * (1 - progress));
+                    const comboZoom = 3 - (2 * progress);
+                    
+                    ctx.filter = `blur(${comboBlur}px)`;
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.scale(1 / comboZoom, 1 / comboZoom);
+                    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+                    ctx.drawImage(img, x * comboZoom, y * comboZoom, w * comboZoom, h * comboZoom);
+                    ctx.restore();
+                    ctx.filter = 'none';
+                    break;
             }
         }
 
