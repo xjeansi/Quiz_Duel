@@ -2706,6 +2706,18 @@
                                 </div>
                             </div>
 
+                            <!-- BUZZER ANZEIGE -->
+                            <div class="info-card" id="werBinIchBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3);">
+                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🔔 Buzzer</h3>
+                                <div id="werBinIchBuzzerDisplay" style="text-align: center; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 15px;">
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-bottom: 8px;">Warte auf Buzz...</div>
+                                    <div id="werBinIchBuzzerName" style="font-size: 1.8rem; font-weight: 700; color: #fbbf24; min-height: 40px;"></div>
+                                </div>
+                                <button class="control-btn-full" onclick="resetWerBinIchBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                                    🔄 Buzzer zurücksetzen
+                                </button>
+                            </div>
+
                             <div class="info-card">
                                 <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🎮 Steuerung</h3>
                                 <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -2942,6 +2954,17 @@
         
         // Highlight gebuzzerten Spieler
         function highlightBuzzedPlayer(playerName) {
+            // UPDATE BUZZER DISPLAY
+            const buzzerNameDisplay = document.getElementById('werBinIchBuzzerName');
+            const buzzerCard = document.getElementById('werBinIchBuzzerCard');
+            
+            if (buzzerNameDisplay) {
+                buzzerNameDisplay.textContent = `🔔 ${playerName}`;
+                buzzerCard.style.background = 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.3) 100%)';
+                buzzerCard.style.border = '2px solid #fbbf24';
+                buzzerCard.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.4)';
+            }
+            
             const container = document.getElementById('gamePlayersList');
             const playerItems = container.querySelectorAll('.game-player-item');
             
@@ -2952,15 +2975,39 @@
                     item.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
                     item.style.transform = 'scale(1.05)';
                     item.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.5)';
-                    
-                    // Nach 3 Sekunden zurücksetzen
-                    setTimeout(() => {
-                        item.style.background = '';
-                        item.style.transform = '';
-                        item.style.boxShadow = '';
-                    }, 3000);
                 }
             });
+        }
+        
+        // Reset Buzzer
+        function resetWerBinIchBuzzer() {
+            werBinIchBuzzedPlayer = null;
+            
+            // Reset Display
+            const buzzerNameDisplay = document.getElementById('werBinIchBuzzerName');
+            const buzzerCard = document.getElementById('werBinIchBuzzerCard');
+            
+            if (buzzerNameDisplay) {
+                buzzerNameDisplay.textContent = '';
+            }
+            
+            if (buzzerCard) {
+                buzzerCard.style.background = 'rgba(251, 191, 36, 0.1)';
+                buzzerCard.style.border = '2px solid rgba(251, 191, 36, 0.3)';
+                buzzerCard.style.boxShadow = 'none';
+            }
+            
+            // Reset Player Highlights
+            const container = document.getElementById('gamePlayersList');
+            const playerItems = container.querySelectorAll('.game-player-item');
+            
+            playerItems.forEach(item => {
+                item.style.background = '';
+                item.style.transform = '';
+                item.style.boxShadow = '';
+            });
+            
+            console.log('🔄 Buzzer zurückgesetzt');
         }
 
         // Spielerliste im Spiel aktualisieren
@@ -2995,6 +3042,9 @@
             }
 
             // Blur-Effekt in jeder Runde
+            
+            // RESET BUZZER FÜR NEUE RUNDE
+            resetWerBinIchBuzzer();
 
             // Verstecke Overlay
             document.getElementById('roundCompleteOverlay').classList.remove('active');
