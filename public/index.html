@@ -2194,10 +2194,8 @@
         let animationFrameId = null;
         let gamePlayers = []; // Spieler im aktuellen Spiel mit eigenen Punkten
         
-        // NEUE EFFEKT-SYSTEM
-        let availableEffects = ['blur', 'zoom', 'combo']; // 3 Effekte
-        let roundEffects = []; // Speichert welcher Effekt für welche Runde
-        let currentEffect = 'blur'; // Aktueller Effekt
+        // NUR BLUR-EFFEKT in jeder Runde
+        let currentEffect = 'blur';
 
         // ========================================
         // SPIEL 2: Cantina Band (Audio Quiz)
@@ -2706,7 +2704,6 @@
                                 <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🎮 Steuerung</h3>
                                 <div style="display: flex; flex-direction: column; gap: 10px;">
                                     <button class="control-btn-full" onclick="pauseGame()" id="pauseBtn">⏸️ Pause</button>
-                                    <button class="control-btn-full" onclick="skipRound()">⏭️ Runde überspringen</button>
                                     <button class="control-btn-full" onclick="resetRound()">🔄 Runde neu starten</button>
                                     <button class="control-btn-full danger" onclick="endGame()">🏁 Spiel beenden</button>
                                 </div>
@@ -2869,13 +2866,8 @@
                 gameScore: 0
             }));
 
-            // GENERIERE ZUFÄLLIGE EFFEKTE FÜR JEDE RUNDE
-            roundEffects = [];
-            for (let i = 0; i < uploadedImages.length; i++) {
-                const randomEffect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
-                roundEffects.push(randomEffect);
-            }
-            console.log('🎨 Zufällige Effekte generiert:', roundEffects);
+            // Blur-Effekt wird in jeder Runde verwendet
+            currentEffect = 'blur';
 
             currentRoundIndex = 0;
             document.getElementById('uploadView').style.display = 'none';
@@ -2918,9 +2910,7 @@
                 return;
             }
 
-            // SETZE EFFEKT FÜR DIESE RUNDE
-            currentEffect = roundEffects[currentRoundIndex];
-            console.log(`🎨 Runde ${currentRoundIndex + 1}: Effekt = ${currentEffect}`);
+            // Blur-Effekt in jeder Runde
 
             // Verstecke Overlay
             document.getElementById('roundCompleteOverlay').classList.remove('active');
@@ -2988,36 +2978,45 @@
         // NEUE FUNKTION: Zeichne Bild mit Effekt
         function drawImageWithEffect(ctx, img, effect, progress) {
             const canvas = ctx.canvas;
-            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-            const x = (canvas.width / 2) - (img.width / 2) * scale;
-            const y = (canvas.height / 2) - (img.height / 2) * scale;
-            const w = img.width * scale;
-            const h = img.height * scale;
+            
+            // Feste Canvas-Größe: 1200x800 (wie vorher!)
+            const targetWidth = 1200;
+            const targetHeight = 800;
+            
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            
+            // Berechne Skalierung um Bild in 1200x800 zu fitten (mit Letterboxing)
+            const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
+            const scaledWidth = img.width * scale;
+            const scaledHeight = img.height * scale;
+            
+            // Zentriere das Bild
+            const x = (targetWidth - scaledWidth) / 2;
+            const y = (targetHeight - scaledHeight) / 2;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Schwarzer Hintergrund
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
 
             switch(effect) {
                 case 'blur':
                     // Blur: 30px → 0px
                     const blurAmount = Math.floor(30 * (1 - progress));
                     ctx.filter = `blur(${blurAmount}px)`;
-                    ctx.drawImage(img, x, y, w, h);
+                    ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
                     ctx.filter = 'none';
                     break;
 
                 case 'zoom':
                     // Zoom: 5x → 1x
                     const zoom = 5 - (4 * progress);
-                    const zoomW = w * zoom;
-                    const zoomH = h * zoom;
-                    const zoomX = x + (w - zoomW) / 2;
-                    const zoomY = y + (h - zoomH) / 2;
                     
                     ctx.save();
-                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.translate(targetWidth / 2, targetHeight / 2);
                     ctx.scale(1 / zoom, 1 / zoom);
-                    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-                    ctx.drawImage(img, x * zoom, y * zoom, w * zoom, h * zoom);
+                    ctx.translate(-targetWidth / 2, -targetHeight / 2);
+                    ctx.drawImage(img, x * zoom, y * zoom, scaledWidth * zoom, scaledHeight * zoom);
                     ctx.restore();
                     break;
 
@@ -3028,10 +3027,10 @@
                     
                     ctx.filter = `blur(${comboBlur}px)`;
                     ctx.save();
-                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.translate(targetWidth / 2, targetHeight / 2);
                     ctx.scale(1 / comboZoom, 1 / comboZoom);
-                    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-                    ctx.drawImage(img, x * comboZoom, y * comboZoom, w * comboZoom, h * comboZoom);
+                    ctx.translate(-targetWidth / 2, -targetHeight / 2);
+                    ctx.drawImage(img, x * comboZoom, y * comboZoom, scaledWidth * comboZoom, scaledHeight * comboZoom);
                     ctx.restore();
                     ctx.filter = 'none';
                     break;
