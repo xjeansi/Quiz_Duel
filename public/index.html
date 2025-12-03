@@ -5189,6 +5189,26 @@
             showEstimateRound();
         }
 
+        // Toggle Lösung anzeigen
+        function toggleSolution() {
+            showSolution = !showSolution;
+            const button = document.getElementById('solutionButton');
+            
+            if (showSolution) {
+                button.textContent = '🔒 Lösung verbergen';
+                button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                button.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                console.log('💡 Lösung wird angezeigt');
+            } else {
+                button.textContent = '💡 Lösung anzeigen';
+                button.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                button.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                console.log('🔒 Lösung verborgen');
+            }
+            
+            updateEstimateDisplay();
+        }
+        
         function showEstimateRound() {
             const modalBody = document.getElementById('modalBody');
             
@@ -5221,14 +5241,7 @@
                                 1. Öffne: <strong style="color: #3b82f6;">jeans.up.railway.app/schaetzen.html</strong><br>
                                 2. Room: <strong style="color: #fbbf24;">QUIZ</strong><br>
                                 3. Name: <strong style="color: #22c55e;">Moderator</strong><br>
-                                4. Spiel starten & Zeit setzen<br>
-                                <br>
-                                <strong style="color: #fbbf24;">Andere Spieler:</strong><br>
-                                1. Öffne auf Handy:<br>
-                                <strong style="color: #3b82f6;">jeans.up.railway.app/schaetzen.html</strong><br>
-                                2. Room: <strong style="color: #fbbf24;">QUIZ</strong><br>
-                                3. Eigenen Namen eingeben<br>
-                                4. Schätzung eingeben & "Fertig"
+                                4. Spiel starten & Zeit setzen
                             </p>
                         </div>
 
@@ -5267,6 +5280,9 @@
                         </div>
 
                         <div style="margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                            <button class="control-btn-full" onclick="toggleSolution()" id="solutionButton" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: 2px solid rgba(34, 197, 94, 0.5);">
+                                💡 Lösung anzeigen
+                            </button>
                             <button class="next-round-btn" onclick="showEstimateWinnerSelection()">
                                 ▶️ Rundengewinner auswählen
                             </button>
@@ -6135,6 +6151,7 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let autoAnswerTimeout = null; // Timeout für Auto-Antwort
 let autoReadyTimeout = null; // Timeout für Auto-Ready
+let showSolution = false; // Ob Moderator-Lösung angezeigt wird
 
 // Verbindung zur Buzzer-App herstellen
 function connectToBuzzerApp(roomCode = 'QUIZ') {
@@ -6239,6 +6256,16 @@ function handleBuzzerMessage(data) {
         case 'guessing_gameStart':
             console.log('🎮 Spiel gestartet!');
             estimateData.clear();
+            showSolution = false; // Lösung verbergen bei neuer Runde
+            
+            // Button zurücksetzen
+            const solutionButton = document.getElementById('solutionButton');
+            if (solutionButton) {
+                solutionButton.textContent = '💡 Lösung anzeigen';
+                solutionButton.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                solutionButton.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+            }
+            
             updateEstimateDisplay();
             
             // Lösche altes Timeout falls vorhanden
@@ -6361,12 +6388,25 @@ function updateEstimateDisplay() {
         return;
     }
     
-    // Konvertiere Map zu Array, filtere QuizDisplay raus und sortiere
-    const estimates = Array.from(estimateData.entries())
-        .filter(([playerName]) => playerName !== 'QuizDisplay') // QuizDisplay ausblenden
-        .sort((a, b) => b[1] - a[1]); // Höchste zuerst
+    // Konvertiere Map zu Array
+    // Filtere: QuizDisplay und Moderator (außer showSolution ist true)
+    let estimates = Array.from(estimateData.entries())
+        .filter(([playerName]) => playerName !== 'QuizDisplay'); // QuizDisplay immer raus
     
-    if (estimates.length === 0) {
+    // Moderator/Host nur anzeigen wenn Lösung aktiviert
+    let moderatorAnswer = null;
+    if (!showSolution) {
+        // Finde und entferne Moderator
+        const moderatorIndex = estimates.findIndex(([playerName]) => playerName === 'Moderator');
+        if (moderatorIndex !== -1) {
+            moderatorAnswer = estimates[moderatorIndex];
+            estimates.splice(moderatorIndex, 1);
+        }
+    }
+    
+    // KEINE Sortierung - zeige in Reihenfolge wie sie ankamen
+    
+    if (estimates.length === 0 && !showSolution) {
         container.innerHTML = `
             <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px; text-align: center;">
                 <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: #ffffff;">
@@ -6384,39 +6424,28 @@ function updateEstimateDisplay() {
     container.innerHTML = `
         <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px;">
             <h3 style="font-size: 1.1rem; margin-bottom: 12px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                📊 Live-Schätzungen
+                📊 ${showSolution ? 'Schätzungen + Lösung' : 'Live-Schätzungen'}
                 <span style="font-size: 0.85rem; color: #22c55e; background: rgba(34, 197, 94, 0.2); padding: 3px 10px; border-radius: 12px;">
-                    ${estimates.length}
+                    ${estimates.length}${showSolution && moderatorAnswer ? ' + Lösung' : ''}
                 </span>
             </h3>
             <div style="display: grid; gap: 8px;">
-                ${estimates.map(([playerName, estimate], index) => {
-                    const medals = ['🥇', '🥈', '🥉'];
-                    const icon = index < 3 ? medals[index] : '👤';
-                    
+                ${estimates.map(([playerName, estimate]) => {
                     return `
                         <div style="
                             display: flex; 
                             justify-content: space-between; 
                             align-items: center; 
                             padding: 10px 15px; 
-                            background: linear-gradient(135deg, 
-                                ${index === 0 ? 'rgba(251, 191, 36, 0.2)' : 
-                                  index === 1 ? 'rgba(192, 192, 192, 0.2)' : 
-                                  index === 2 ? 'rgba(205, 127, 50, 0.2)' : 
-                                  'rgba(124, 58, 237, 0.2)'} 0%, 
-                                rgba(59, 130, 246, 0.2) 100%);
-                            border: 1.5px solid ${index === 0 ? '#fbbf24' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'rgba(124, 58, 237, 0.4)'};
+                            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%);
+                            border: 1.5px solid rgba(124, 58, 237, 0.4);
                             border-radius: 10px;
                             animation: slideInEstimate 0.3s ease-out;
-                            animation-delay: ${index * 0.05}s;
-                            animation-fill-mode: both;
                         ">
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-size: 1.5rem;">${icon}</span>
+                                <span style="font-size: 1.5rem;">👤</span>
                                 <div>
                                     <div style="font-weight: 700; font-size: 1rem; color: #ffffff;">${playerName}</div>
-                                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5);">#${index + 1}</div>
                                 </div>
                             </div>
                             <div style="font-weight: 700; font-size: 1.3rem; color: #fbbf24;">
@@ -6425,6 +6454,31 @@ function updateEstimateDisplay() {
                         </div>
                     `;
                 }).join('')}
+                
+                ${showSolution && moderatorAnswer ? `
+                    <div style="
+                        display: flex; 
+                        justify-content: space-between; 
+                        align-items: center; 
+                        padding: 12px 18px; 
+                        background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%);
+                        border: 2px solid rgba(34, 197, 94, 0.6);
+                        border-radius: 10px;
+                        animation: slideInEstimate 0.5s ease-out;
+                        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+                    ">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.8rem;">💡</span>
+                            <div>
+                                <div style="font-weight: 700; font-size: 1.1rem; color: #22c55e;">${moderatorAnswer[0]}</div>
+                                <div style="font-size: 0.8rem; color: rgba(34, 197, 94, 0.8);">Richtige Lösung</div>
+                            </div>
+                        </div>
+                        <div style="font-weight: 700; font-size: 1.5rem; color: #22c55e;">
+                            ${moderatorAnswer[1].toLocaleString('de-DE')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         </div>
     `;
