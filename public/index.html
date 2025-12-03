@@ -5252,6 +5252,19 @@
                         
                         <!-- LIVE SCHÄTZUNGEN CONTAINER -->
                         <div id="buzzerEstimatesContainer" style="width: 100%; max-width: 600px;"></div>
+                        
+                        <div style="margin-top: 15px; padding: 15px; background: rgba(59, 130, 246, 0.1); border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; text-align: center;">
+                            <div style="font-size: 1.1rem; color: #3b82f6; font-weight: 600; margin-bottom: 8px;">
+                                📱 Spieler-App öffnen
+                            </div>
+                            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">
+                                <strong>jeans.up.railway.app/schaetzen.html</strong><br>
+                                Room: <strong style="color: #fbbf24;">QUIZ</strong>
+                            </div>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 8px;">
+                                💡 Schätzungen erscheinen automatisch wenn Spieler "Fertig" drücken
+                            </div>
+                        </div>
 
                         <div style="margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
                             <button class="control-btn-full" onclick="showEstimatesModal()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: 2px solid rgba(59, 130, 246, 0.5);">
@@ -5589,29 +5602,71 @@
         function requestEstimatesUpdate() {
             console.log('🔄 Fordere Spielerliste manuell an...');
             
+            // STRATEGIE 1: Prüfe ob WebSocket Nachrichten empfängt
+            console.log('WebSocket Status:', buzzerWs ? buzzerWs.readyState : 'nicht initialisiert');
+            
             if (!buzzerWs || buzzerWs.readyState !== 1) {
                 alert('❌ WebSocket nicht verbunden!\n\nBitte öffne Spiel 5 neu.');
                 return;
             }
             
-            // Sende Request für aktuelle Spielerliste
-            // Das triggert ein guessing_playerList Event
-            buzzerWs.send(JSON.stringify({
-                type: 'guessing_getPlayers',
-                roomCode: currentRoomCode
-            }));
-            
-            console.log('📤 Request gesendet');
-            
-            // Warte kurz und zeige Feedback
-            setTimeout(() => {
-                if (estimateData.size > 0) {
-                    alert(`✅ Update erfolgreich!\n\n${estimateData.size} Schätzung(en) empfangen.\n\nDu kannst jetzt "📊 Schätzungen anzeigen" klicken.`);
-                } else {
-                    alert('⚠️ Keine Schätzungen empfangen.\n\nMögliche Gründe:\n- Spieler haben noch nichts eingegeben\n- Spieler sind im falschen Room\n- Spieler haben nicht "Fertig" gedrückt\n\nPrüfe die Console (F12) für Details.');
-                }
-            }, 1000);
+            // STRATEGIE 2: Versuche HTTP API (falls vorhanden)
+            console.log('📡 Versuche HTTP API...');
+            fetch(`https://jeans.up.railway.app/api/estimates/${currentRoomCode}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('API nicht verfügbar');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('✅ Daten von API empfangen:', data);
+                    
+                    // Verarbeite API-Daten
+                    if (data.players) {
+                        data.players.forEach(player => {
+                            if (player.answered && player.answer !== undefined && player.answer !== '') {
+                                const estimate = parseFloat(player.answer) || 0;
+                                estimateData.set(player.name, estimate);
+                                console.log(`  ✅ Geladen: ${player.name} = ${estimate}`);
+                            }
+                        });
+                        
+                        updateEstimateDisplay();
+                        
+                        if (estimateData.size > 0) {
+                            alert(`✅ Update erfolgreich!\n\n${estimateData.size} Schätzung(en) empfangen.\n\nDu kannst jetzt "📊 Schätzungen anzeigen" klicken.`);
+                        } else {
+                            alert('⚠️ Keine Schätzungen vorhanden.\n\nSpieler müssen in der Buzzer-App:\n1. Zahl eingeben\n2. "Fertig" drücken');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('⚠️ HTTP API nicht verfügbar:', error.message);
+                    
+                    // STRATEGIE 3: WebSocket Trick - simuliere Spieler-Update
+                    console.log('📡 Versuche WebSocket Trick...');
+                    
+                    // Sende "ready" um Server-Update zu triggern
+                    buzzerWs.send(JSON.stringify({
+                        type: 'guessing_ready',
+                        roomCode: currentRoomCode
+                    }));
+                    
+                    console.log('📤 guessing_ready gesendet');
+                    
+                    // Warte auf Antwort
+                    setTimeout(() => {
+                        if (estimateData.size > 0) {
+                            alert(`✅ Update erfolgreich!\n\n${estimateData.size} Schätzung(en) empfangen.\n\nDu kannst jetzt "📊 Schätzungen anzeigen" klicken.`);
+                        } else {
+                            // STRATEGIE 4: Zeige manuelle Anleitung
+                            alert(`⚠️ Automatisches Update nicht möglich.\n\n🎯 MANUELLE LÖSUNG:\n\n1. Spieler öffnen Buzzer-App:\n   jeans.up.railway.app/schaetzen.html\n\n2. Room: QUIZ\n\n3. Zahl eingeben → "Fertig" drücken\n\n4. In dieser Quiz-App:\n   - Schau Console (F12)\n   - Bei "Fertig" sollte erscheinen:\n     "✅ Gespeichert: Name = Zahl"\n\n5. Dann funktioniert "Schätzungen anzeigen"!\n\n💡 Tipp: Console (F12) zeigt dir live\nwenn Schätzungen ankommen.`);
+                        }
+                    }, 1500);
+                });
         }
+
 
         function showEstimateWinnerSelection() {
             const modalBody = document.getElementById('modalBody');
