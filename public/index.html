@@ -3562,6 +3562,7 @@
             modalIcon.textContent = '🔨';
             modalTitle.textContent = 'Auktionshaus';
             
+            // Spielregeln anzeigen
             modalBody.innerHTML = `
                 <div class="config-section" style="text-align: center; padding: 60px 80px; position: relative;">
                     <div style="position: absolute; top: 20px; right: 20px; opacity: 0.3;"><img src="Logo/buzzer.jpg" alt="Buzzer" style="width: 80px; height: auto;"></div>
@@ -3572,27 +3573,587 @@
                     <div style="text-align: center; background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 30px;">
                         <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: #ffffff;">📋 Spielregeln</h3>
                         <ul style="list-style: none; padding: 0; font-size: 1.1rem; line-height: 2; color: rgba(255, 255, 255, 0.9);">
-                            <li style="margin-bottom: 12px;">✅ Ihr seht eine eBay-Auktion auf dem Bildschirm</li>
-                            <li style="margin-bottom: 12px;">✅ Nutzt die Schätz-App, um zu raten, wie viel der Artikel gekostet hat</li>
-                            <li style="margin-bottom: 12px;">✅ Wer am nächsten dran ist, bekommt den Punkt</li>
-                            <li style="margin-bottom: 12px;">✅ Bei Gleichstand bekommen beide Spieler den Punkt</li>
+                            <li style="margin-bottom: 12px;">✅ Bilder von eBay-Auktionen werden angezeigt</li>
+                            <li style="margin-bottom: 12px;">✅ Schätze den Verkaufspreis in Euro (z.B. 25,99)</li>
+                            <li style="margin-bottom: 12px;">✅ Nutze die Schätz-App auf deinem Handy</li>
+                            <li style="margin-bottom: 12px;">✅ Wer am nächsten dran ist, bekommt den Punkt!</li>
                         </ul>
                     </div>
 
-                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border-radius: 12px; padding: 20px; margin-bottom: 30px; border: 2px solid rgba(251, 191, 36, 0.3);">
-                        <p style="font-size: 1.2rem; font-weight: 700; color: #fbbf24; margin: 0; line-height: 1.6;">
-                            💡 Tipp: Zeigt reale eBay-Auktionen auf dem Bildschirm und lasst die Spieler den Endpreis schätzen!
-                        </p>
-                    </div>
-
-                    <button class="save-config-btn" onclick="closeModal()" style="font-size: 1.2rem; padding: 18px 50px;">
-                        ✓ Verstanden!
+                    <button class="save-config-btn" onclick="startAuktionshausUpload()" style="font-size: 1.2rem; padding: 18px 50px;">
+                        ✓ Verstanden, weiter!
                     </button>
                 </div>
             `;
 
             modal.classList.add('active');
         }
+
+        // Variablen für Auktionshaus
+        let auktionImages = [];
+        let auktionCurrentRound = 1;
+        let auktionPlayers = [];
+        let auktionRoundHistory = [];
+        let auktionWs = null;
+        let auktionEstimateData = new Map();
+        let auktionShowSolution = false;
+
+        function startAuktionshausUpload() {
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <div class="upload-section">
+                    <h3 class="upload-title">📸 eBay-Bilder hochladen</h3>
+                    <p class="upload-subtitle">Lade Bilder von eBay-Auktionen hoch. Jedes Bild = 1 Runde!</p>
+                    
+                    <div class="upload-controls">
+                        <label for="auktionImageUpload" class="upload-label">
+                            <span class="upload-icon">📁</span>
+                            <span class="upload-text">Bilder auswählen</span>
+                            <input type="file" id="auktionImageUpload" accept="image/*" multiple style="display: none;">
+                        </label>
+                        
+                        <div class="upload-info">
+                            <span id="auktionImageCount">0</span> Bilder hochgeladen
+                        </div>
+                    </div>
+                    
+                    <div id="auktionImagePreview" class="image-preview-grid"></div>
+                    
+                    <button class="save-config-btn" onclick="startAuktionshausGame()" id="startAuktionBtn" style="margin-top: 30px;" disabled>
+                        🎮 Spiel starten!
+                    </button>
+                </div>
+            `;
+            
+            // Event Listener für Upload
+            document.getElementById('auktionImageUpload').addEventListener('change', handleAuktionImageUpload);
+        }
+
+        function handleAuktionImageUpload(e) {
+            const files = Array.from(e.target.files);
+            
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        auktionImages.push({
+                            data: event.target.result,
+                            name: file.name
+                        });
+                        updateAuktionImagePreview();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function updateAuktionImagePreview() {
+            const preview = document.getElementById('auktionImagePreview');
+            const counter = document.getElementById('auktionImageCount');
+            const startBtn = document.getElementById('startAuktionBtn');
+            
+            counter.textContent = auktionImages.length;
+            startBtn.disabled = auktionImages.length === 0;
+            
+            preview.innerHTML = auktionImages.map((img, index) => `
+                <div class="image-preview-item" style="position: relative;">
+                    <img src="${img.data}" alt="Bild ${index + 1}">
+                    <button class="delete-image-btn" onclick="deleteAuktionImage(${index})" style="position: absolute; top: 5px; right: 5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 1.2rem;">×</button>
+                    <div class="image-number">${index + 1}</div>
+                </div>
+            `).join('');
+        }
+
+        function deleteAuktionImage(index) {
+            auktionImages.splice(index, 1);
+            updateAuktionImagePreview();
+        }
+
+        function startAuktionshausGame() {
+            if (auktionImages.length === 0) {
+                alert('Bitte lade zuerst Bilder hoch!');
+                return;
+            }
+            
+            auktionCurrentRound = 1;
+            auktionRoundHistory = [];
+            auktionPlayers = players.map(p => ({ name: p.name, score: 0 }));
+            
+            // Verbinde mit Buzzer-App
+            connectToAuktionBuzzer();
+            
+            showAuktionRound();
+        }
+
+        function connectToAuktionBuzzer() {
+            const BUZZER_URL = 'wss://jeans.up.railway.app';
+            
+            try {
+                auktionWs = new WebSocket(BUZZER_URL);
+                
+                auktionWs.onopen = () => {
+                    console.log('🔨 Auktionshaus WebSocket verbunden');
+                    auktionWs.send(JSON.stringify({
+                        type: 'guessing_join',
+                        room: 'AUKTIONSHAUS',
+                        playerName: 'QuizDisplay'
+                    }));
+                };
+                
+                auktionWs.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleAuktionMessage(data);
+                    } catch (error) {
+                        console.error('Fehler beim Parsen:', error);
+                    }
+                };
+                
+                auktionWs.onclose = () => {
+                    console.log('🔨 Auktionshaus WebSocket getrennt');
+                };
+            } catch (error) {
+                console.error('WebSocket Fehler:', error);
+            }
+        }
+
+        function handleAuktionMessage(data) {
+            switch(data.type) {
+                case 'guessing_joined':
+                    console.log('✅ Auktionshaus beigetreten');
+                    auktionWs.send(JSON.stringify({ type: 'guessing_ready' }));
+                    break;
+                    
+                case 'guessing_playerList':
+                    if (data.players && Array.isArray(data.players)) {
+                        data.players.forEach(player => {
+                            if (player.answered && player.answer && player.name !== 'QuizDisplay' && player.name !== 'Moderator') {
+                                const answer = String(player.answer).trim();
+                                // Nur Zahlen akzeptieren
+                                const numAnswer = parseFloat(answer.replace(',', '.'));
+                                if (!isNaN(numAnswer)) {
+                                    auktionEstimateData.set(player.name, numAnswer);
+                                }
+                            }
+                        });
+                        updateAuktionDisplay();
+                    }
+                    break;
+                    
+                case 'guessing_gameStart':
+                    auktionEstimateData.clear();
+                    auktionShowSolution = false;
+                    updateAuktionDisplay();
+                    
+                    // QuizDisplay sendet automatisch 0
+                    setTimeout(() => {
+                        if (auktionWs && auktionWs.readyState === 1) {
+                            auktionWs.send(JSON.stringify({
+                                type: 'guessing_answer',
+                                answer: '0'
+                            }));
+                        }
+                    }, 2000);
+                    break;
+                    
+                case 'guessing_gameEnd':
+                    if (data.results && Array.isArray(data.results)) {
+                        data.results.forEach(result => {
+                            if (result.name && result.answer && result.name !== 'QuizDisplay' && result.name !== 'Moderator') {
+                                const answer = String(result.answer).trim();
+                                const numAnswer = parseFloat(answer.replace(',', '.'));
+                                if (!isNaN(numAnswer)) {
+                                    auktionEstimateData.set(result.name, numAnswer);
+                                }
+                            }
+                        });
+                        updateAuktionDisplay();
+                    }
+                    break;
+                    
+                case 'guessing_nextRound':
+                    auktionEstimateData.clear();
+                    auktionShowSolution = false;
+                    updateAuktionDisplay();
+                    
+                    setTimeout(() => {
+                        if (auktionWs && auktionWs.readyState === 1) {
+                            auktionWs.send(JSON.stringify({ type: 'guessing_ready' }));
+                        }
+                    }, 1000);
+                    break;
+            }
+        }
+
+        function showAuktionRound() {
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <div style="display: flex; gap: 20px; height: 100%; min-height: 700px;">
+                    <!-- Linke Sidebar -->
+                    <div style="width: 350px; display: flex; flex-direction: column; gap: 15px;">
+                        <div class="info-card">
+                            <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🏆 Bestenliste</h3>
+                            <div id="auktionLeaderboard"></div>
+                        </div>
+                        
+                        <div class="info-card">
+                            <h3 style="margin-bottom: 15px; font-size: 1.3rem;">📊 Spielinfo</h3>
+                            <div class="info-row">
+                                <span class="info-label">Runde:</span>
+                                <span class="info-value">${auktionCurrentRound} / ${auktionImages.length}</span>
+                            </div>
+                            <div class="info-row" style="margin-top: 10px;">
+                                <span class="info-label">Room Code:</span>
+                                <span class="info-value" style="color: #fbbf24;">AUKTIONSHAUS</span>
+                            </div>
+                            <div class="info-row" style="margin-top: 10px;">
+                                <span class="info-label">Jeans joint als:</span>
+                                <span class="info-value" style="color: #22c55e;">Moderator</span>
+                            </div>
+                        </div>
+                        
+                        ${auktionRoundHistory.length > 0 ? `
+                        <div class="info-card">
+                            <h3 style="margin-bottom: 15px; font-size: 1.3rem;">📝 Runden-Historie</h3>
+                            <div style="max-height: 96px; overflow-y: auto;">
+                                ${auktionRoundHistory.map((round, index) => `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-bottom: 8px;">
+                                        <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
+                                            R${index + 1}: ${round.winner || 'Niemand'}
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Rechter Bereich -->
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; padding-top: 40px;">
+                        <!-- Bild und Schätzungen nebeneinander -->
+                        <div style="display: flex; gap: 30px; align-items: flex-start; width: 100%; max-width: 1100px;">
+                            <!-- eBay-Bild -->
+                            <div style="flex-shrink: 0; width: 400px;">
+                                <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 20px; border: 2px solid rgba(124, 58, 237, 0.3);">
+                                    <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin-bottom: 15px; text-align: center;">
+                                        🔨 Runde ${auktionCurrentRound}
+                                    </div>
+                                    <img src="${auktionImages[auktionCurrentRound - 1].data}" style="width: 100%; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);">
+                                </div>
+                            </div>
+                            
+                            <!-- Live-Schätzungen -->
+                            <div id="auktionEstimatesContainer" style="flex: 1; min-width: 0;"></div>
+                        </div>
+                        
+                        <div style="margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                            <button onclick="toggleAuktionSolution()" id="auktionSolutionButton" style="
+                                background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
+                                border: 2px solid rgba(34, 197, 94, 0.5);
+                                color: white;
+                                padding: 12px 24px;
+                                border-radius: 12px;
+                                font-size: 1rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                            ">
+                                💡 Lösung anzeigen
+                            </button>
+                            <button class="next-round-btn" onclick="showAuktionWinnerSelection()">
+                                ▶️ Rundengewinner auswählen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            updateAuktionLeaderboard();
+            updateAuktionDisplay();
+        }
+
+        function updateAuktionLeaderboard() {
+            const container = document.getElementById('auktionLeaderboard');
+            if (!container) return;
+            
+            const sorted = [...auktionPlayers].sort((a, b) => b.score - a.score);
+            
+            container.innerHTML = sorted.map((player, index) => {
+                const isTop3 = index < 3;
+                const medals = ['🥇', '🥈', '🥉'];
+                
+                return `
+                    <div class="game-player-item" style="${isTop3 ? 'background: rgba(124, 58, 237, 0.2); border-color: rgba(124, 58, 237, 0.4);' : ''}">
+                        <span class="game-player-name">
+                            ${isTop3 ? medals[index] + ' ' : ''}${player.name}
+                        </span>
+                        <span class="game-player-score">${player.score}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAuktionDisplay() {
+            const container = document.getElementById('auktionEstimatesContainer');
+            if (!container) return;
+            
+            let estimates = Array.from(auktionEstimateData.entries())
+                .filter(([playerName]) => playerName !== 'QuizDisplay');
+            
+            let moderatorAnswer = null;
+            if (!auktionShowSolution) {
+                const moderatorIndex = estimates.findIndex(([playerName]) => playerName === 'Moderator');
+                if (moderatorIndex !== -1) {
+                    moderatorAnswer = estimates[moderatorIndex];
+                    estimates.splice(moderatorIndex, 1);
+                }
+            }
+            
+            if (estimates.length === 0 && !auktionShowSolution) {
+                container.innerHTML = `
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px; text-align: center;">
+                        <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: #ffffff;">💶 Live-Schätzungen</h3>
+                        <p style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">Warte auf Schätzungen...</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 12px; color: #ffffff;">
+                        💶 ${auktionShowSolution ? 'Schätzungen + Lösung' : 'Live-Schätzungen'}
+                        <span style="font-size: 0.85rem; color: #22c55e; background: rgba(34, 197, 94, 0.2); padding: 3px 10px; border-radius: 12px; margin-left: 8px;">
+                            ${estimates.length}${auktionShowSolution && moderatorAnswer ? ' + Lösung' : ''}
+                        </span>
+                    </h3>
+                    <div style="display: grid; gap: 8px;">
+                        ${estimates.map(([playerName, estimate]) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%); border: 1.5px solid rgba(124, 58, 237, 0.4); border-radius: 10px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 1.5rem;">👤</span>
+                                    <div style="font-weight: 700; font-size: 1rem; color: #ffffff;">${playerName}</div>
+                                </div>
+                                <div style="font-weight: 700; font-size: 1.3rem; color: #fbbf24;">
+                                    ${estimate.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                                </div>
+                            </div>
+                        `).join('')}
+                        
+                        ${auktionShowSolution && moderatorAnswer ? `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%); border: 2px solid rgba(34, 197, 94, 0.6); border-radius: 10px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 1.8rem;">💡</span>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 1.1rem; color: #22c55e;">${moderatorAnswer[0]}</div>
+                                        <div style="font-size: 0.8rem; color: rgba(34, 197, 94, 0.8);">Verkaufspreis</div>
+                                    </div>
+                                </div>
+                                <div style="font-weight: 700; font-size: 1.5rem; color: #22c55e;">
+                                    ${moderatorAnswer[1].toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleAuktionSolution() {
+            auktionShowSolution = !auktionShowSolution;
+            const button = document.getElementById('auktionSolutionButton');
+            
+            if (auktionShowSolution) {
+                button.textContent = '🔒 Lösung verbergen';
+                button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                button.textContent = '💡 Lösung anzeigen';
+                button.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+            }
+            
+            updateAuktionDisplay();
+        }
+
+        function showAuktionWinnerSelection() {
+            if (auktionEstimateData.size === 0) {
+                alert('Noch keine Schätzungen vorhanden!');
+                return;
+            }
+            
+            const modalBody = document.getElementById('modalBody');
+            
+            // Finde Moderator-Antwort (richtige Lösung)
+            let solution = null;
+            for (const [name, value] of auktionEstimateData.entries()) {
+                if (name === 'Moderator') {
+                    solution = value;
+                    break;
+                }
+            }
+            
+            if (!solution) {
+                alert('Moderator hat noch keinen Verkaufspreis eingegeben!');
+                return;
+            }
+            
+            // Berechne Abstände
+            const playerEstimates = Array.from(auktionEstimateData.entries())
+                .filter(([name]) => name !== 'QuizDisplay' && name !== 'Moderator')
+                .map(([name, estimate]) => ({
+                    name,
+                    estimate,
+                    difference: Math.abs(estimate - solution)
+                }))
+                .sort((a, b) => a.difference - b.difference);
+            
+            if (playerEstimates.length === 0) {
+                alert('Keine Spieler-Schätzungen vorhanden!');
+                return;
+            }
+            
+            // Finde Gewinner (alle mit kleinster Differenz)
+            const minDiff = playerEstimates[0].difference;
+            const winners = playerEstimates.filter(p => p.difference === minDiff);
+            
+            modalBody.innerHTML = `
+                <div class="config-section" style="text-align: center; padding: 60px;">
+                    <h2 style="font-size: 2.5rem; margin-bottom: 40px; color: #ffffff;">🏆 Rundengewinner</h2>
+                    
+                    <div style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
+                        <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">Verkaufspreis:</div>
+                        <div style="font-size: 3rem; font-weight: 700; color: #22c55e;">
+                            ${solution.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
+                        <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: #ffffff;">Alle Schätzungen:</h3>
+                        ${playerEstimates.map((p, index) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: ${index === 0 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border-radius: 12px; margin-bottom: 10px; border: 2px solid ${index === 0 ? '#fbbf24' : 'rgba(255,255,255,0.1)'};">
+                                <span style="font-weight: 700; font-size: 1.2rem; color: #ffffff;">
+                                    ${index < 3 ? ['🥇', '🥈', '🥉'][index] : '👤'} ${p.name}
+                                </span>
+                                <div style="text-align: right;">
+                                    <div style="font-weight: 700; font-size: 1.2rem; color: #fbbf24;">
+                                        ${p.estimate.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6);">
+                                        ${p.difference.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
+                        <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">
+                            ${winners.length > 1 ? 'Gewinner (Gleichstand):' : 'Gewinner:'}
+                        </div>
+                        ${winners.map(w => `
+                            <div style="font-size: 2.5rem; font-weight: 700; color: #fbbf24; margin: 10px 0;">
+                                🏆 ${w.name}
+                            </div>
+                        `).join('')}
+                        <div style="font-size: 1.1rem; color: rgba(255,255,255,0.7); margin-top: 15px;">
+                            Nur ${minDiff.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben!
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        ${winners.map(w => `
+                            <button class="save-config-btn" onclick="finishAuktionRound('${w.name.replace(/'/g, "\\'")}')">
+                                ${w.name} bekommt Punkt
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function finishAuktionRound(winnerName) {
+            // Punkt vergeben
+            const winner = auktionPlayers.find(p => p.name === winnerName);
+            if (winner) {
+                winner.score++;
+            }
+            
+            // Historie speichern
+            auktionRoundHistory.push({ winner: winnerName });
+            
+            // Nächste Runde oder Ende
+            if (auktionCurrentRound >= auktionImages.length) {
+                showAuktionFinalResults();
+            } else {
+                auktionCurrentRound++;
+                auktionEstimateData.clear();
+                auktionShowSolution = false;
+                showAuktionRound();
+            }
+        }
+
+        function showAuktionFinalResults() {
+            // Disconnect von Buzzer
+            if (auktionWs && auktionWs.readyState === 1) {
+                auktionWs.send(JSON.stringify({
+                    type: 'guessing_leave',
+                    room: 'AUKTIONSHAUS'
+                }));
+                auktionWs.close();
+            }
+            
+            const modalBody = document.getElementById('modalBody');
+            const sorted = [...auktionPlayers].sort((a, b) => b.score - a.score);
+            const winner = sorted[0];
+            
+            modalBody.innerHTML = `
+                <div class="config-section" style="text-align: center; padding: 60px;">
+                    <div style="font-size: 5rem; margin-bottom: 20px;">🏆</div>
+                    <h2 style="font-size: 3rem; margin-bottom: 40px; color: #ffffff;">Spiel beendet!</h2>
+                    
+                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 40px; margin-bottom: 40px;">
+                        <div style="font-size: 1.5rem; color: rgba(255,255,255,0.8); margin-bottom: 20px;">Gewinner:</div>
+                        <div style="font-size: 4rem; font-weight: 700; color: #fbbf24; margin: 20px 0;">
+                            ${winner.name}
+                        </div>
+                        <div style="font-size: 2rem; color: rgba(255,255,255,0.9);">
+                            ${winner.score} ${winner.score === 1 ? 'Punkt' : 'Punkte'}
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
+                        <h3 style="font-size: 1.8rem; margin-bottom: 25px; color: #ffffff;">Endstand:</h3>
+                        ${sorted.map((p, index) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: ${index === 0 ? 'rgba(251, 191, 36, 0.2)' : index === 1 ? 'rgba(192, 192, 192, 0.2)' : index === 2 ? 'rgba(205, 127, 50, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border-radius: 12px; margin-bottom: 10px; border: 2px solid ${index === 0 ? '#fbbf24' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'rgba(255,255,255,0.1)'};">
+                                <span style="font-weight: 700; font-size: 1.4rem; color: #ffffff;">
+                                    ${index < 3 ? ['🥇', '🥈', '🥉'][index] : (index + 1) + '.'} ${p.name}
+                                </span>
+                                <span style="font-weight: 700; font-size: 1.4rem; color: #fbbf24;">${p.score} Punkte</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <button class="save-config-btn" onclick="addWinnerPoints('${winner.name.replace(/'/g, "\\'")}', ${winner.score}); closeModal();" style="font-size: 1.2rem; padding: 18px 50px;">
+                        ✓ Punkte zu Hauptliste hinzufügen
+                    </button>
+                </div>
+            `;
+        }
+
+        // Bei closeModal Auktionshaus-WebSocket trennen
+        const originalCloseModal = closeModal;
+        closeModal = function() {
+            if (auktionWs && auktionWs.readyState === 1) {
+                auktionWs.send(JSON.stringify({
+                    type: 'guessing_leave',
+                    room: 'AUKTIONSHAUS'
+                }));
+                auktionWs.close();
+                auktionWs = null;
+            }
+            originalCloseModal();
+        };
 
         // ========================================
         // SPIEL 8: Auslandsmaus Jeans
