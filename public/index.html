@@ -5648,12 +5648,12 @@
         // Playlist-System für Hintergrundmusik
         const songPlaylist = [
             'Song/song1.mp3',
-            'Song/song2.mp3',
-            // Füge hier weitere Songs hinzu oder ersetze mit deinen Dateinamen
+            'Song/song2.mp3'
         ];
 
         let currentSongIndex = -1;
         let shuffledPlaylist = [];
+        let musicStarted = false;
 
         // Playlist mischen
         function shufflePlaylist() {
@@ -5678,11 +5678,18 @@
             backgroundMusic.load();
             backgroundMusic.volume = 0.3;
             
+            console.log(`🎵 Spiele ab: ${shuffledPlaylist[currentSongIndex]}`);
+            
             const playPromise = backgroundMusic.play();
             if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log('Musik konnte nicht abgespielt werden:', error);
-                });
+                playPromise
+                    .then(() => {
+                        console.log('✅ Musik spielt erfolgreich');
+                        musicStarted = true;
+                    })
+                    .catch(error => {
+                        console.log('⚠️ Auto-Play blockiert - Klicke auf die Seite:', error.message);
+                    });
             }
             
             currentSongIndex++;
@@ -5692,22 +5699,39 @@
         window.addEventListener('DOMContentLoaded', () => {
             const backgroundMusic = document.getElementById('backgroundMusic');
             
+            console.log('🎮 Quiz Duel geladen - Initialisiere Musik...');
+            
             // Initialisiere Playlist
             shufflePlaylist();
             
             // Event-Listener: Nächster Song wenn aktueller endet
-            backgroundMusic.addEventListener('ended', playNextSong);
+            backgroundMusic.addEventListener('ended', () => {
+                console.log('🎵 Song beendet - Spiele nächsten...');
+                playNextSong();
+            });
             
-            // Starte ersten Song
-            playNextSong();
+            // Fehler-Listener
+            backgroundMusic.addEventListener('error', (e) => {
+                console.error('❌ Fehler beim Laden des Songs:', e);
+                console.log('Versuche nächsten Song...');
+                playNextSong(); // Versuche nächsten Song
+            });
             
-            // Fallback bei Auto-Play-Blockierung
-            document.body.addEventListener('click', function startMusic() {
-                if (backgroundMusic.paused) {
+            // Versuche ersten Song zu starten
+            setTimeout(() => {
+                playNextSong();
+            }, 1000); // Warte 1 Sekunde nach Animation
+            
+            // Fallback: Starte bei erstem Klick falls Auto-Play blockiert
+            const startOnClick = () => {
+                if (!musicStarted) {
+                    console.log('👆 Benutzer-Klick erkannt - Starte Musik...');
                     playNextSong();
                 }
-                document.body.removeEventListener('click', startMusic);
-            }, { once: true });
+            };
+            
+            document.body.addEventListener('click', startOnClick, { once: true });
+            document.body.addEventListener('touchstart', startOnClick, { once: true });
         });
     </script>
 </body>
