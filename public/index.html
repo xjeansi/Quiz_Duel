@@ -1940,6 +1940,22 @@
                                     <span class="info-label">Verbleibende Zeit:</span>
                                     <span class="info-value timer-value" id="timer">30</span>s
                                 </div>
+                                <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <span class="info-label">🔔 Buzzer Room:</span>
+                                    <span class="info-value" style="color: #fbbf24;">WERBINICH</span>
+                                </div>
+                            </div>
+
+                            <!-- BUZZER ANZEIGE -->
+                            <div class="info-card" id="werBinIchBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3);">
+                                <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🔔 Buzzer</h3>
+                                <div id="werBinIchBuzzerDisplay" style="text-align: center; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 15px;">
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-bottom: 8px;">Warte auf Buzz...</div>
+                                    <div id="werBinIchBuzzerName" style="font-size: 1.8rem; font-weight: 700; color: #fbbf24; min-height: 40px;"></div>
+                                </div>
+                                <button class="control-btn-full" onclick="resetWerBinIchBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                                    🔄 Buzzer zurücksetzen
+                                </button>
                             </div>
 
                             <!-- Controls -->
