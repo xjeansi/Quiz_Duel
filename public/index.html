@@ -6138,6 +6138,8 @@ let currentRoomCode = null;
 let estimateData = new Map(); // playerName -> answer
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
+let autoAnswerTimeout = null; // Timeout für Auto-Antwort
+let autoReadyTimeout = null; // Timeout für Auto-Ready
 
 // Verbindung zur Buzzer-App herstellen
 function connectToBuzzerApp(roomCode = 'QUIZ') {
@@ -6244,17 +6246,23 @@ function handleBuzzerMessage(data) {
             estimateData.clear();
             updateEstimateDisplay();
             
+            // Lösche altes Timeout falls vorhanden
+            if (autoAnswerTimeout) {
+                clearTimeout(autoAnswerTimeout);
+            }
+            
             // QuizDisplay sendet automatisch 0 nach 2-3 Sekunden
             const randomDelay = 2000 + Math.random() * 1000; // 2-3 Sekunden
             console.log(`⏱️ QuizDisplay wird in ${Math.round(randomDelay/1000)}s automatisch 0 senden...`);
             
-            setTimeout(() => {
+            autoAnswerTimeout = setTimeout(() => {
                 if (buzzerWs && buzzerWs.readyState === 1) {
                     console.log('📤 QuizDisplay sendet automatisch Antwort: 0');
                     buzzerWs.send(JSON.stringify({
                         type: 'guessing_answer',
                         answer: '0'
                     }));
+                    autoAnswerTimeout = null;
                 }
             }, randomDelay);
             break;
@@ -6282,12 +6290,44 @@ function handleBuzzerMessage(data) {
                     showBuzzerStatus(`🏁 Spiel beendet! ${estimateData.size} Schätzungen verfügbar`, 'success');
                 }
             }
+            
+            // Lösche alte Ready-Timeouts
+            if (autoReadyTimeout) {
+                clearTimeout(autoReadyTimeout);
+            }
+            
+            // Nach Spiel-Ende: Setze QuizDisplay automatisch ready für nächste Runde
+            autoReadyTimeout = setTimeout(() => {
+                if (buzzerWs && buzzerWs.readyState === 1) {
+                    console.log('📤 QuizDisplay setzt sich bereit für nächste Runde...');
+                    buzzerWs.send(JSON.stringify({
+                        type: 'guessing_ready'
+                    }));
+                    autoReadyTimeout = null;
+                }
+            }, 1000); // 1 Sekunde Verzögerung
             break;
             
         case 'guessing_nextRound':
             console.log('🔄 Nächste Runde');
             estimateData.clear();
             updateEstimateDisplay();
+            
+            // Lösche alte Ready-Timeouts
+            if (autoReadyTimeout) {
+                clearTimeout(autoReadyTimeout);
+            }
+            
+            // Bei neuer Runde: Setze QuizDisplay automatisch ready
+            autoReadyTimeout = setTimeout(() => {
+                if (buzzerWs && buzzerWs.readyState === 1) {
+                    console.log('📤 QuizDisplay setzt sich bereit für Runde...');
+                    buzzerWs.send(JSON.stringify({
+                        type: 'guessing_ready'
+                    }));
+                    autoReadyTimeout = null;
+                }
+            }, 1000);
             break;
             
         case 'guessing_countdown':
