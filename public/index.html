@@ -3658,11 +3658,25 @@
         function handleAuktionImageFiles(files) {
             files.forEach(file => {
                 if (file.type.startsWith('image/')) {
+                    // Extrahiere Preis aus Dateiname (z.B. "15_99.jpg" -> 15.99)
+                    const filename = file.name.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '');
+                    const priceParts = filename.split('_');
+                    let price = null;
+                    
+                    if (priceParts.length === 2) {
+                        const euros = parseInt(priceParts[0]);
+                        const cents = parseInt(priceParts[1]);
+                        if (!isNaN(euros) && !isNaN(cents)) {
+                            price = euros + (cents / 100);
+                        }
+                    }
+                    
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         auktionImages.push({
                             data: event.target.result,
-                            name: file.name
+                            name: file.name,
+                            price: price // Speichere extrahierten Preis
                         });
                         updateAuktionUploadCount();
                     };
@@ -3924,22 +3938,23 @@
         }
 
         function updateAuktionDisplay() {
+            // Wenn Lösung angezeigt wird, nutze die Animation-Version
+            if (auktionShowSolution) {
+                const currentImage = auktionImages[auktionCurrentRound - 1];
+                const solution = currentImage.price;
+                if (solution) {
+                    updateAuktionDisplayWithAnimation(solution);
+                    return;
+                }
+            }
+            
             const container = document.getElementById('auktionEstimatesContainer');
             if (!container) return;
             
             let estimates = Array.from(auktionEstimateData.entries())
-                .filter(([playerName]) => playerName !== 'QuizDisplay');
+                .filter(([playerName]) => playerName !== 'QuizDisplay' && playerName !== 'Moderator');
             
-            let moderatorAnswer = null;
-            if (!auktionShowSolution) {
-                const moderatorIndex = estimates.findIndex(([playerName]) => playerName === 'Moderator');
-                if (moderatorIndex !== -1) {
-                    moderatorAnswer = estimates[moderatorIndex];
-                    estimates.splice(moderatorIndex, 1);
-                }
-            }
-            
-            if (estimates.length === 0 && !auktionShowSolution) {
+            if (estimates.length === 0) {
                 container.innerHTML = `
                     <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px; text-align: center;">
                         <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: #ffffff;">💶 Live-Schätzungen</h3>
@@ -3952,9 +3967,9 @@
             container.innerHTML = `
                 <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 12px; color: #ffffff;">
-                        💶 ${auktionShowSolution ? 'Schätzungen + Lösung' : 'Live-Schätzungen'}
+                        💶 Live-Schätzungen
                         <span style="font-size: 0.85rem; color: #22c55e; background: rgba(34, 197, 94, 0.2); padding: 3px 10px; border-radius: 12px; margin-left: 8px;">
-                            ${estimates.length}${auktionShowSolution && moderatorAnswer ? ' + Lösung' : ''}
+                            ${estimates.length}
                         </span>
                     </h3>
                     <div style="display: grid; gap: 8px;">
@@ -3969,42 +3984,171 @@
                                 </div>
                             </div>
                         `).join('')}
-                        
-                        ${auktionShowSolution && moderatorAnswer ? `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%); border: 2px solid rgba(34, 197, 94, 0.6); border-radius: 10px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span style="font-size: 1.8rem;">💡</span>
-                                    <div>
-                                        <div style="font-weight: 700; font-size: 1.1rem; color: #22c55e;">${moderatorAnswer[0]}</div>
-                                        <div style="font-size: 0.8rem; color: rgba(34, 197, 94, 0.8);">Verkaufspreis</div>
-                                    </div>
-                                </div>
-                                <div style="font-weight: 700; font-size: 1.5rem; color: #22c55e;">
-                                    ${moderatorAnswer[1].toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
-                                </div>
-                            </div>
-                        ` : ''}
                     </div>
                 </div>
             `;
         }
 
         function toggleAuktionSolution() {
-            auktionShowSolution = !auktionShowSolution;
-            const button = document.getElementById('auktionSolutionButton');
-            
             if (auktionShowSolution) {
-                button.textContent = '🔒 Lösung verbergen';
-                button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            } else {
+                // Lösung verbergen
+                auktionShowSolution = false;
+                const button = document.getElementById('auktionSolutionButton');
                 button.textContent = '💡 Lösung anzeigen';
                 button.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                updateAuktionDisplay();
+                return;
             }
             
-            updateAuktionDisplay();
+            // Hole aktuellen Preis
+            const currentImage = auktionImages[auktionCurrentRound - 1];
+            const solution = currentImage.price;
+            
+            if (!solution) {
+                alert('❌ Fehler: Kein Preis im Dateinamen gefunden!\n\nBitte benenne die Datei um: z.B. "15_99.jpg" für 15,99€');
+                return;
+            }
+            
+            // Prüfe ob Moderator schon eine Antwort hat
+            let moderatorHasAnswer = false;
+            for (const [name] of auktionEstimateData.entries()) {
+                if (name === 'Moderator') {
+                    moderatorHasAnswer = true;
+                    break;
+                }
+            }
+            
+            if (!moderatorHasAnswer) {
+                // Setze automatisch Moderator-Antwort aus Dateiname
+                auktionEstimateData.set('Moderator', solution);
+                console.log(`💡 Automatischer Preis aus Dateinamen: ${solution}€`);
+            }
+            
+            // Zeige Lösung an
+            auktionShowSolution = true;
+            const button = document.getElementById('auktionSolutionButton');
+            button.textContent = '🔒 Lösung verbergen';
+            button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            
+            // Update Display mit Animation
+            updateAuktionDisplayWithAnimation(solution);
+        }
+        
+        function updateAuktionDisplayWithAnimation(solution) {
+            const container = document.getElementById('auktionEstimatesContainer');
+            if (!container) return;
+            
+            let estimates = Array.from(auktionEstimateData.entries())
+                .filter(([playerName]) => playerName !== 'QuizDisplay' && playerName !== 'Moderator');
+            
+            // Berechne Abstände und sortiere
+            const playerEstimates = estimates.map(([name, estimate]) => ({
+                name,
+                estimate,
+                difference: Math.abs(estimate - solution)
+            })).sort((a, b) => a.difference - b.difference);
+            
+            if (playerEstimates.length === 0) {
+                container.innerHTML = `
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px; text-align: center;">
+                        <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: #ffffff;">💶 Live-Schätzungen</h3>
+                        <p style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">Warte auf Schätzungen...</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Finde Gewinner
+            const minDiff = playerEstimates[0].difference;
+            const isWinner = (diff) => diff === minDiff;
+            
+            container.innerHTML = `
+                <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 12px; color: #ffffff;">
+                        💶 Schätzungen + Auswertung
+                        <span style="font-size: 0.85rem; color: #22c55e; background: rgba(34, 197, 94, 0.2); padding: 3px 10px; border-radius: 12px; margin-left: 8px;">
+                            ${playerEstimates.length} + Lösung
+                        </span>
+                    </h3>
+                    <div style="display: grid; gap: 8px;">
+                        ${playerEstimates.map((p) => `
+                            <div style="
+                                display: flex; 
+                                justify-content: space-between; 
+                                align-items: center; 
+                                padding: 10px 15px; 
+                                background: ${isWinner(p.difference) ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.3) 100%)' : 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)'};
+                                border: 2px solid ${isWinner(p.difference) ? '#fbbf24' : 'rgba(124, 58, 237, 0.4)'};
+                                border-radius: 10px;
+                                ${isWinner(p.difference) ? 'box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);' : ''}
+                            ">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 1.5rem;">${isWinner(p.difference) ? '🏆' : '👤'}</span>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 1rem; color: #ffffff;">${p.name}</div>
+                                        <div style="font-size: 0.75rem; color: ${isWinner(p.difference) ? '#fbbf24' : 'rgba(255,255,255,0.6)'};">
+                                            ${p.difference.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-weight: 700; font-size: 1.3rem; color: ${isWinner(p.difference) ? '#fbbf24' : '#fbbf24'};">
+                                    ${p.estimate.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                                </div>
+                            </div>
+                        `).join('')}
+                        
+                        <div id="solutionCard" style="
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: center; 
+                            padding: 12px 18px; 
+                            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%);
+                            border: 2px solid rgba(34, 197, 94, 0.6);
+                            border-radius: 10px;
+                            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+                            animation: slideInSolution 0.5s ease-out;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.8rem;">💡</span>
+                                <div>
+                                    <div style="font-weight: 700; font-size: 1.1rem; color: #22c55e;">Moderator</div>
+                                    <div style="font-size: 0.8rem; color: rgba(34, 197, 94, 0.8);">Verkaufspreis</div>
+                                </div>
+                            </div>
+                            <div style="font-weight: 700; font-size: 1.5rem; color: #22c55e;">
+                                ${solution.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // CSS Animation hinzufügen (falls nicht vorhanden)
+            if (!document.getElementById('auktionAnimations')) {
+                const style = document.createElement('style');
+                style.id = 'auktionAnimations';
+                style.textContent = `
+                    @keyframes slideInSolution {
+                        from {
+                            transform: translateY(-20px);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateY(0);
+                            opacity: 1;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
         }
 
         function showAuktionWinnerSelection() {
+            if (!auktionShowSolution) {
+                alert('⚠️ Bitte erst "Lösung anzeigen" klicken, um den Gewinner zu sehen!');
+                return;
+            }
+            
             if (auktionEstimateData.size === 0) {
                 alert('Noch keine Schätzungen vorhanden!');
                 return;
@@ -4012,17 +4156,12 @@
             
             const modalBody = document.getElementById('modalBody');
             
-            // Finde Moderator-Antwort (richtige Lösung)
-            let solution = null;
-            for (const [name, value] of auktionEstimateData.entries()) {
-                if (name === 'Moderator') {
-                    solution = value;
-                    break;
-                }
-            }
+            // Hole Preis aus Dateiname
+            const currentImage = auktionImages[auktionCurrentRound - 1];
+            const solution = currentImage.price;
             
             if (!solution) {
-                alert('Moderator hat noch keinen Verkaufspreis eingegeben!');
+                alert('❌ Fehler: Kein Preis im Dateinamen gefunden!');
                 return;
             }
             
@@ -4041,7 +4180,7 @@
                 return;
             }
             
-            // Finde Gewinner (alle mit kleinster Differenz)
+            // Finde Gewinner
             const minDiff = playerEstimates[0].difference;
             const winners = playerEstimates.filter(p => p.difference === minDiff);
             
@@ -4053,6 +4192,20 @@
                         <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">Verkaufspreis:</div>
                         <div style="font-size: 3rem; font-weight: 700; color: #22c55e;">
                             ${solution.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
+                        <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">
+                            ${winners.length > 1 ? 'Gewinner (Gleichstand):' : 'Gewinner:'}
+                        </div>
+                        ${winners.map(w => `
+                            <div style="font-size: 2.5rem; font-weight: 700; color: #fbbf24; margin: 10px 0;">
+                                🏆 ${w.name}
+                            </div>
+                        `).join('')}
+                        <div style="font-size: 1.1rem; color: rgba(255,255,255,0.7); margin-top: 15px;">
+                            Nur ${minDiff.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben!
                         </div>
                     </div>
                     
@@ -4075,24 +4228,10 @@
                         `).join('')}
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 16px; padding: 30px; margin-bottom: 40px;">
-                        <div style="font-size: 1.3rem; color: rgba(255,255,255,0.8); margin-bottom: 15px;">
-                            ${winners.length > 1 ? 'Gewinner (Gleichstand):' : 'Gewinner:'}
-                        </div>
-                        ${winners.map(w => `
-                            <div style="font-size: 2.5rem; font-weight: 700; color: #fbbf24; margin: 10px 0;">
-                                🏆 ${w.name}
-                            </div>
-                        `).join('')}
-                        <div style="font-size: 1.1rem; color: rgba(255,255,255,0.7); margin-top: 15px;">
-                            Nur ${minDiff.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} € daneben!
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; justify-content: center;">
+                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                         ${winners.map(w => `
                             <button class="save-config-btn" onclick="finishAuktionRound('${w.name.replace(/'/g, "\\'")}')">
-                                ${w.name} bekommt Punkt
+                                ✓ ${w.name} bekommt Punkt
                             </button>
                         `).join('')}
                     </div>
