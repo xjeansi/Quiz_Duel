@@ -6291,21 +6291,9 @@ function handleBuzzerMessage(data) {
                 }
             }
             
-            // Lösche alte Ready-Timeouts
-            if (autoReadyTimeout) {
-                clearTimeout(autoReadyTimeout);
-            }
-            
-            // Nach Spiel-Ende: Setze QuizDisplay automatisch ready für nächste Runde
-            autoReadyTimeout = setTimeout(() => {
-                if (buzzerWs && buzzerWs.readyState === 1) {
-                    console.log('📤 QuizDisplay setzt sich bereit für nächste Runde...');
-                    buzzerWs.send(JSON.stringify({
-                        type: 'guessing_ready'
-                    }));
-                    autoReadyTimeout = null;
-                }
-            }, 1000); // 1 Sekunde Verzögerung
+            // KEIN Auto-Ready hier! 
+            // Host muss manuell "Nächste Runde" drücken
+            // Dann kommt guessing_nextRound Event
             break;
             
         case 'guessing_nextRound':
