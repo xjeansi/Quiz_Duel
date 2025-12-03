@@ -5257,6 +5257,9 @@
                             <button class="control-btn-full" onclick="showEstimatesModal()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: 2px solid rgba(59, 130, 246, 0.5);">
                                 📊 Schätzungen anzeigen
                             </button>
+                            <button class="control-btn-full" onclick="debugBuzzerConnection()" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border: 2px solid rgba(139, 92, 246, 0.5);">
+                                🔍 Debug Info
+                            </button>
                             <button class="control-btn-full" onclick="resetEstimates()" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);">
                                 🔄 Zurücksetzen
                             </button>
@@ -5300,15 +5303,30 @@
         }
 
         function showEstimatesModal() {
+            // Debug-Ausgabe
+            console.log('🔍 showEstimatesModal aufgerufen');
+            console.log('📊 estimateData exists:', typeof estimateData !== 'undefined');
+            console.log('📊 estimateData size:', typeof estimateData !== 'undefined' ? estimateData.size : 'undefined');
+            console.log('📊 estimateData content:', typeof estimateData !== 'undefined' ? Array.from(estimateData.entries()) : 'undefined');
+            
             // Hole alle aktuellen Schätzungen
-            if (typeof estimateData === 'undefined' || estimateData.size === 0) {
-                alert('⚠️ Noch keine Schätzungen vorhanden!\n\nSpieler müssen erst ihre Schätzungen in der Buzzer-App eingeben.');
+            if (typeof estimateData === 'undefined') {
+                alert('⚠️ Fehler: estimateData nicht initialisiert!\n\nBitte stelle sicher, dass die Buzzer-Integration geladen wurde.');
+                console.error('❌ estimateData ist undefined!');
+                return;
+            }
+            
+            if (estimateData.size === 0) {
+                alert('⚠️ Noch keine Schätzungen vorhanden!\n\nSpieler müssen erst ihre Schätzungen in der Buzzer-App eingeben.\n\nRoom Code: QUIZ\nURL: jeans.up.railway.app\n\n💡 Tipp: Öffne die Console (F12) um zu sehen ob Schätzungen empfangen werden.');
+                console.warn('⚠️ estimateData ist leer (size = 0)');
                 return;
             }
             
             // Konvertiere Map zu Array und sortiere
             const estimates = Array.from(estimateData.entries())
                 .sort((a, b) => b[1] - a[1]); // Höchste zuerst
+            
+            console.log('✅ Zeige', estimates.length, 'Schätzungen im Modal');
             
             // Erstelle Modal-Overlay
             const overlay = document.createElement('div');
@@ -5513,6 +5531,55 @@
             console.log('='.repeat(50));
             
             alert('✅ Schätzungen wurden in die Console ausgegeben!\n\nDrücke F12 um die Console zu öffnen.');
+        }
+        
+        function debugBuzzerConnection() {
+            console.log('🔍 DEBUG INFO - BUZZER CONNECTION');
+            console.log('='.repeat(50));
+            console.log('WebSocket Status:', buzzerWs ? buzzerWs.readyState : 'nicht initialisiert');
+            console.log('  - 0 = CONNECTING');
+            console.log('  - 1 = OPEN ✅');
+            console.log('  - 2 = CLOSING');
+            console.log('  - 3 = CLOSED');
+            console.log('');
+            console.log('Room Code:', currentRoomCode || 'nicht gesetzt');
+            console.log('');
+            console.log('estimateData existiert:', typeof estimateData !== 'undefined');
+            console.log('estimateData.size:', typeof estimateData !== 'undefined' ? estimateData.size : 'undefined');
+            console.log('estimateData Inhalt:', typeof estimateData !== 'undefined' ? Array.from(estimateData.entries()) : 'undefined');
+            console.log('='.repeat(50));
+            
+            let status = '';
+            if (!buzzerWs) {
+                status = '❌ WebSocket nicht verbunden!\n\n';
+                status += '💡 Lösung:\n';
+                status += '1. Schließe Spiel 5\n';
+                status += '2. Öffne Spiel 5 neu\n';
+                status += '3. Verbindung sollte automatisch hergestellt werden';
+            } else if (buzzerWs.readyState === 1) {
+                status = '✅ WebSocket verbunden!\n\n';
+                status += `Room Code: ${currentRoomCode}\n`;
+                status += `Schätzungen: ${estimateData.size}\n\n`;
+                if (estimateData.size === 0) {
+                    status += '⚠️ Aber keine Schätzungen empfangen.\n\n';
+                    status += '💡 Mögliche Ursachen:\n';
+                    status += '1. Spieler haben noch nichts eingegeben\n';
+                    status += '2. Falscher Room Code\n';
+                    status += '3. Spieler sind in anderem Room\n\n';
+                    status += '🔧 Prüfe:\n';
+                    status += '- Buzzer-App: jeans.up.railway.app\n';
+                    status += '- Room muss "QUIZ" sein\n';
+                    status += '- Spieler müssen "Fertig" drücken';
+                } else {
+                    status += '✅ Alles funktioniert!\n';
+                    status += `${estimateData.size} Schätzung(en) vorhanden`;
+                }
+            } else {
+                status = '⚠️ WebSocket getrennt!\n\n';
+                status += 'Reconnect läuft automatisch...';
+            }
+            
+            alert('🔍 DEBUG INFO\n\n' + status + '\n\nDetails in Console (F12)');
         }
 
         function showEstimateWinnerSelection() {
@@ -6052,32 +6119,23 @@ function connectToBuzzerApp(roomCode = 'QUIZ') {
 
 // Nachrichten von Buzzer-App verarbeiten
 function handleBuzzerMessage(data) {
-    console.log('📩 Nachricht empfangen:', data.type);
+    console.log('📩 Nachricht empfangen:', data.type, data);
     
     switch(data.type) {
         case 'guessing_playerList':
+            // Alle Spieler mit ihren Antworten
+            console.log('👥 Spielerliste empfangen:', data.players);
             updatePlayerList(data.players);
             break;
             
         case 'guessing_answer':
-            // Einzelne Antwort empfangen
+            // Einzelne Antwort empfangen (wird normalerweise nicht direkt gesendet)
             if (data.playerName && data.answer !== undefined) {
                 estimateData.set(data.playerName, parseFloat(data.answer) || 0);
                 console.log(`📊 ${data.playerName} schätzt: ${data.answer}`);
+                console.log('💾 Aktuelle estimateData:', Array.from(estimateData.entries()));
                 updateEstimateDisplay();
                 showNewEstimateNotification(data.playerName, data.answer);
-            }
-            break;
-            
-        case 'guessing_playerList':
-            // Alle Spieler mit ihren Antworten
-            if (data.players) {
-                data.players.forEach(player => {
-                    if (player.answered && player.answer !== undefined) {
-                        estimateData.set(player.name, parseFloat(player.answer) || 0);
-                    }
-                });
-                updateEstimateDisplay();
             }
             break;
             
@@ -6089,6 +6147,7 @@ function handleBuzzerMessage(data) {
             
         case 'guessing_gameEnd':
             console.log('🏁 Spiel beendet!');
+            console.log('📊 Finale Schätzungen:', Array.from(estimateData.entries()));
             break;
             
         case 'guessing_nextRound':
@@ -6096,6 +6155,9 @@ function handleBuzzerMessage(data) {
             estimateData.clear();
             updateEstimateDisplay();
             break;
+            
+        default:
+            console.log('❓ Unbekannter Message-Type:', data.type);
     }
 }
 
@@ -6103,12 +6165,25 @@ function handleBuzzerMessage(data) {
 function updatePlayerList(players) {
     console.log('👥 Spieler aktualisiert:', players.length);
     
+    if (!players || players.length === 0) {
+        console.warn('⚠️ Keine Spieler in der Liste');
+        return;
+    }
+    
     // Aktualisiere Schätzungen von allen Spielern die geantwortet haben
+    let updatedCount = 0;
     players.forEach(player => {
-        if (player.answered && player.answer !== undefined) {
-            estimateData.set(player.name, parseFloat(player.answer) || 0);
+        console.log(`  - ${player.name}: answered=${player.answered}, answer=${player.answer}`);
+        if (player.answered && player.answer !== undefined && player.answer !== '') {
+            const estimate = parseFloat(player.answer) || 0;
+            estimateData.set(player.name, estimate);
+            updatedCount++;
+            console.log(`    ✅ Gespeichert: ${player.name} = ${estimate}`);
         }
     });
+    
+    console.log(`💾 ${updatedCount} Schätzungen gespeichert`);
+    console.log('📊 Aktuelle estimateData:', Array.from(estimateData.entries()));
     
     updateEstimateDisplay();
 }
