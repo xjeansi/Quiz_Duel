@@ -5257,6 +5257,9 @@
                             <button class="control-btn-full" onclick="showEstimatesModal()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: 2px solid rgba(59, 130, 246, 0.5);">
                                 📊 Schätzungen anzeigen
                             </button>
+                            <button class="control-btn-full" onclick="requestEstimatesUpdate()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: 2px solid rgba(16, 185, 129, 0.5);">
+                                🔄 Daten aktualisieren
+                            </button>
                             <button class="control-btn-full" onclick="debugBuzzerConnection()" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border: 2px solid rgba(139, 92, 246, 0.5);">
                                 🔍 Debug Info
                             </button>
@@ -5567,9 +5570,10 @@
                     status += '2. Falscher Room Code\n';
                     status += '3. Spieler sind in anderem Room\n\n';
                     status += '🔧 Prüfe:\n';
-                    status += '- Buzzer-App: jeans.up.railway.app\n';
+                    status += '- Buzzer-App: jeans.up.railway.app/schaetzen.html\n';
                     status += '- Room muss "QUIZ" sein\n';
-                    status += '- Spieler müssen "Fertig" drücken';
+                    status += '- Spieler müssen "Fertig" drücken\n\n';
+                    status += '💡 Klicke "🔄 Daten aktualisieren"';
                 } else {
                     status += '✅ Alles funktioniert!\n';
                     status += `${estimateData.size} Schätzung(en) vorhanden`;
@@ -5580,6 +5584,33 @@
             }
             
             alert('🔍 DEBUG INFO\n\n' + status + '\n\nDetails in Console (F12)');
+        }
+        
+        function requestEstimatesUpdate() {
+            console.log('🔄 Fordere Spielerliste manuell an...');
+            
+            if (!buzzerWs || buzzerWs.readyState !== 1) {
+                alert('❌ WebSocket nicht verbunden!\n\nBitte öffne Spiel 5 neu.');
+                return;
+            }
+            
+            // Sende Request für aktuelle Spielerliste
+            // Das triggert ein guessing_playerList Event
+            buzzerWs.send(JSON.stringify({
+                type: 'guessing_getPlayers',
+                roomCode: currentRoomCode
+            }));
+            
+            console.log('📤 Request gesendet');
+            
+            // Warte kurz und zeige Feedback
+            setTimeout(() => {
+                if (estimateData.size > 0) {
+                    alert(`✅ Update erfolgreich!\n\n${estimateData.size} Schätzung(en) empfangen.\n\nDu kannst jetzt "📊 Schätzungen anzeigen" klicken.`);
+                } else {
+                    alert('⚠️ Keine Schätzungen empfangen.\n\nMögliche Gründe:\n- Spieler haben noch nichts eingegeben\n- Spieler sind im falschen Room\n- Spieler haben nicht "Fertig" gedrückt\n\nPrüfe die Console (F12) für Details.');
+                }
+            }, 1000);
         }
 
         function showEstimateWinnerSelection() {
@@ -6088,9 +6119,12 @@ function connectToBuzzerApp(roomCode = 'QUIZ') {
         buzzerWs.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                console.log('📩 RAW MESSAGE:', event.data);
+                console.log('📩 PARSED:', data);
                 handleBuzzerMessage(data);
             } catch (error) {
                 console.error('❌ Fehler beim Parsen der Nachricht:', error);
+                console.error('   Raw data:', event.data);
             }
         };
         
