@@ -14,18 +14,46 @@ app.use((req, res, next) => {
     next();
 });
 
-// Statische Dateien servieren
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/Logo', express.static(path.join(__dirname, 'Logo')));
+// Statische Dateien servieren - REIHENFOLGE IST WICHTIG!
+// 1. Song und Logo Ordner ZUERST (direkter Zugriff)
 app.use('/Song', express.static(path.join(__dirname, 'Song')));
+app.use('/Logo', express.static(path.join(__dirname, 'Logo')));
+
+// 2. Public Ordner für HTML/CSS/JS
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 3. Root-Dateien als Fallback
+app.use(express.static(__dirname));
 
 // Health Check für Railway
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        songPath: path.join(__dirname, 'Song')
     });
+});
+
+// Debug: Zeige verfügbare Songs
+app.get('/api/songs', (req, res) => {
+    const fs = require('fs');
+    const songDir = path.join(__dirname, 'Song');
+    
+    try {
+        const files = fs.readdirSync(songDir);
+        res.json({
+            songDirectory: songDir,
+            files: files,
+            count: files.length
+        });
+    } catch (error) {
+        res.json({
+            error: 'Song Ordner nicht gefunden',
+            songDirectory: songDir,
+            message: error.message
+        });
+    }
 });
 
 // Route für Hauptseite
@@ -53,6 +81,7 @@ app.get('/', (req, res) => {
                                 <p>Bitte stelle sicher, dass index.html in ./public/ oder im Root liegt.</p>
                                 <hr>
                                 <p><a href="/health">Server Health Check</a></p>
+                                <p><a href="/api/songs">Verfügbare Songs anzeigen</a></p>
                             </body>
                         </html>
                     `);
@@ -82,6 +111,7 @@ app.use((req, res) => {
                 <h1>404 - Seite nicht gefunden</h1>
                 <p>Die Seite ${req.url} existiert nicht.</p>
                 <p><a href="/">Zurück zur Startseite</a></p>
+                <p><a href="/api/songs">Songs prüfen</a></p>
             </body>
         </html>
     `);
@@ -98,6 +128,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🎮 Quiz Duel Server gestartet`);
     console.log(`🌐 Port: ${PORT}`);
     console.log(`📁 Root: ${__dirname}`);
+    console.log(`🎵 Song Pfad: ${path.join(__dirname, 'Song')}`);
     console.log(`⏰ Gestartet: ${new Date().toISOString()}`);
     console.log('==========================================');
 });
