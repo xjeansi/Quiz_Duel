@@ -5253,9 +5253,12 @@
                         <!-- LIVE SCHÄTZUNGEN CONTAINER -->
                         <div id="buzzerEstimatesContainer" style="width: 100%; max-width: 600px;"></div>
 
-                        <div style="margin-top: 30px; display: flex; gap: 15px;">
+                        <div style="margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                            <button class="control-btn-full" onclick="showEstimatesModal()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: 2px solid rgba(59, 130, 246, 0.5);">
+                                📊 Schätzungen anzeigen
+                            </button>
                             <button class="control-btn-full" onclick="resetEstimates()" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);">
-                                🔄 Schätzungen zurücksetzen
+                                🔄 Zurücksetzen
                             </button>
                             <button class="next-round-btn" onclick="showEstimateWinnerSelection()">
                                 ▶️ Rundengewinner auswählen
@@ -5294,6 +5297,222 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function showEstimatesModal() {
+            // Hole alle aktuellen Schätzungen
+            if (typeof estimateData === 'undefined' || estimateData.size === 0) {
+                alert('⚠️ Noch keine Schätzungen vorhanden!\n\nSpieler müssen erst ihre Schätzungen in der Buzzer-App eingeben.');
+                return;
+            }
+            
+            // Konvertiere Map zu Array und sortiere
+            const estimates = Array.from(estimateData.entries())
+                .sort((a, b) => b[1] - a[1]); // Höchste zuerst
+            
+            // Erstelle Modal-Overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'estimatesModalOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(10px);
+                z-index: 10000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                animation: fadeIn 0.3s ease-out;
+            `;
+            
+            overlay.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+                    border-radius: 24px;
+                    padding: 40px;
+                    max-width: 700px;
+                    width: 90%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                    border: 2px solid rgba(124, 58, 237, 0.3);
+                    position: relative;
+                ">
+                    <button onclick="closeEstimatesModal()" style="
+                        position: absolute;
+                        top: 20px;
+                        right: 20px;
+                        background: rgba(239, 68, 68, 0.2);
+                        border: 2px solid rgba(239, 68, 68, 0.5);
+                        color: white;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        font-size: 1.5rem;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.background='rgba(239, 68, 68, 0.4)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                        ✕
+                    </button>
+                    
+                    <h2 style="
+                        font-size: 2.5rem;
+                        margin-bottom: 30px;
+                        text-align: center;
+                        color: #ffffff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 15px;
+                    ">
+                        📊 Alle Schätzungen
+                        <span style="
+                            font-size: 1rem;
+                            background: rgba(34, 197, 94, 0.2);
+                            border: 2px solid rgba(34, 197, 94, 0.5);
+                            padding: 8px 16px;
+                            border-radius: 20px;
+                            color: #22c55e;
+                        ">
+                            ${estimates.length} Spieler
+                        </span>
+                    </h2>
+                    
+                    <div style="display: grid; gap: 15px;">
+                        ${estimates.map(([playerName, estimate], index) => {
+                            const medals = ['🥇', '🥈', '🥉'];
+                            const icon = index < 3 ? medals[index] : (index + 1);
+                            const isTopThree = index < 3;
+                            
+                            return `
+                                <div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    padding: 20px 25px;
+                                    background: ${isTopThree ? 
+                                        (index === 0 ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%)' :
+                                         index === 1 ? 'linear-gradient(135deg, rgba(192, 192, 192, 0.2) 0%, rgba(156, 163, 175, 0.2) 100%)' :
+                                         'linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(180, 83, 9, 0.2) 100%)') :
+                                        'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)'
+                                    };
+                                    border: 2px solid ${isTopThree ? 
+                                        (index === 0 ? '#fbbf24' : index === 1 ? '#c0c0c0' : '#cd7f32') :
+                                        'rgba(124, 58, 237, 0.4)'
+                                    };
+                                    border-radius: 16px;
+                                    animation: slideInEstimate 0.3s ease-out;
+                                    animation-delay: ${index * 0.05}s;
+                                    animation-fill-mode: both;
+                                    box-shadow: ${isTopThree ? '0 4px 12px rgba(0, 0, 0, 0.3)' : 'none'};
+                                ">
+                                    <div style="display: flex; align-items: center; gap: 20px;">
+                                        <span style="
+                                            font-size: 2.5rem;
+                                            min-width: 60px;
+                                            text-align: center;
+                                        ">
+                                            ${typeof icon === 'string' ? icon : `<span style="font-size: 1.3rem; color: rgba(255,255,255,0.6);">#${icon}</span>`}
+                                        </span>
+                                        <div>
+                                            <div style="
+                                                font-weight: 700;
+                                                font-size: 1.4rem;
+                                                color: #ffffff;
+                                                margin-bottom: 5px;
+                                            ">
+                                                ${playerName}
+                                            </div>
+                                            <div style="
+                                                font-size: 0.9rem;
+                                                color: rgba(255, 255, 255, 0.6);
+                                            ">
+                                                Platz ${index + 1} von ${estimates.length}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="
+                                        font-weight: 700;
+                                        font-size: 2rem;
+                                        color: #fbbf24;
+                                        text-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+                                    ">
+                                        ${estimate.toLocaleString('de-DE')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div style="margin-top: 30px; display: flex; gap: 15px;">
+                        <button onclick="exportEstimatesToConsole()" style="
+                            flex: 1;
+                            padding: 15px 30px;
+                            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                            border: 2px solid rgba(99, 102, 241, 0.5);
+                            color: white;
+                            border-radius: 12px;
+                            font-size: 1.1rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            📋 In Console ausgeben
+                        </button>
+                        <button onclick="closeEstimatesModal()" style="
+                            flex: 1;
+                            padding: 15px 30px;
+                            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+                            border: 2px solid rgba(124, 58, 237, 0.5);
+                            color: white;
+                            border-radius: 12px;
+                            font-size: 1.1rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            ✓ Schließen
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+        }
+        
+        function closeEstimatesModal() {
+            const overlay = document.getElementById('estimatesModalOverlay');
+            if (overlay) {
+                overlay.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+        
+        function exportEstimatesToConsole() {
+            if (typeof estimateData === 'undefined' || estimateData.size === 0) {
+                console.log('Keine Schätzungen vorhanden');
+                return;
+            }
+            
+            const estimates = Array.from(estimateData.entries())
+                .sort((a, b) => b[1] - a[1]);
+            
+            console.log('='.repeat(50));
+            console.log('📊 SCHÄTZUNGEN - RUNDE ' + estimateCurrentRound);
+            console.log('='.repeat(50));
+            estimates.forEach(([name, estimate], index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+                console.log(`${medal} #${index + 1} - ${name}: ${estimate.toLocaleString('de-DE')}`);
+            });
+            console.log('='.repeat(50));
+            
+            alert('✅ Schätzungen wurden in die Console ausgegeben!\n\nDrücke F12 um die Console zu öffnen.');
         }
 
         function showEstimateWinnerSelection() {
@@ -6091,6 +6310,16 @@ if (!document.getElementById('buzzer-animations')) {
         @keyframes slideInEstimate {
             from { transform: translateY(-20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
         
         .estimate-card {
