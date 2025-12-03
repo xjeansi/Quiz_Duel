@@ -5218,7 +5218,7 @@
                     <div style="width: 350px; display: flex; flex-direction: column; gap: 15px;">
                         <div class="info-card">
                             <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🏆 Bestenliste</h3>
-                            <div id="estimateLeaderboard" style="max-height: 300px; overflow-y: auto;">
+                            <div id="estimateLeaderboard">
                             </div>
                         </div>
 
@@ -5232,7 +5232,7 @@
                                 <span class="info-label">Room Code:</span>
                                 <span class="info-value" style="color: #fbbf24;">QUIZ</span>
                             </div>
-                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <div class="info-row" style="margin-top: 10px;">
                                 <span class="info-label">Jeans joint als:</span>
                                 <span class="info-value" style="color: #22c55e;">Moderator</span>
                             </div>
@@ -5241,7 +5241,7 @@
                         ${estimateRoundHistory.length > 0 ? `
                         <div class="info-card">
                             <h3 style="margin-bottom: 15px; font-size: 1.3rem;">📝 Runden-Historie</h3>
-                            <div style="max-height: 250px; overflow-y: auto;">
+                            <div style="max-height: 96px; overflow-y: auto;">
                                 ${estimateRoundHistory.map((round, index) => `
                                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-bottom: 8px;">
                                         <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
