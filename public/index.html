@@ -6161,11 +6161,17 @@ function connectToBuzzerApp(roomCode = 'QUIZ') {
             console.log('✅ WebSocket verbunden!');
             reconnectAttempts = 0;
             
-            // Als Host joinen (kann Spiel steuern)
+            // Als Spieler im Guessing Game joinen
+            console.log('📤 Sende guessing_join:', {
+                type: 'guessing_join',
+                room: currentRoomCode,
+                playerName: 'QuizDisplay'
+            });
+            
             buzzerWs.send(JSON.stringify({
                 type: 'guessing_join',
-                roomCode: currentRoomCode,
-                playerName: 'QuizMaster'
+                room: currentRoomCode,
+                playerName: 'QuizDisplay'
             }));
             
             showBuzzerStatus('Mit Buzzer-App verbunden', 'success');
@@ -6211,6 +6217,10 @@ function handleBuzzerMessage(data) {
     console.log('📩 Nachricht empfangen:', data.type, data);
     
     switch(data.type) {
+        case 'guessing_joined':
+            console.log('✅ Erfolgreich beigetreten:', data);
+            break;
+            
         case 'guessing_playerList':
             // Alle Spieler mit ihren Antworten
             console.log('👥 Spielerliste empfangen:', data.players);
@@ -6235,14 +6245,42 @@ function handleBuzzerMessage(data) {
             break;
             
         case 'guessing_gameEnd':
-            console.log('🏁 Spiel beendet!');
-            console.log('📊 Finale Schätzungen:', Array.from(estimateData.entries()));
+            console.log('🏁 Spiel beendet! Results:', data.results);
+            
+            // Verarbeite results Array
+            if (data.results && Array.isArray(data.results)) {
+                data.results.forEach(result => {
+                    if (result.name && result.answer) {
+                        // Entferne Komma und konvertiere zu Number
+                        const answer = result.answer.replace(',', '.');
+                        const estimate = parseFloat(answer) || 0;
+                        estimateData.set(result.name, estimate);
+                        console.log(`  ✅ Result: ${result.name} = ${estimate}`);
+                    }
+                });
+                
+                console.log('📊 Finale Schätzungen:', Array.from(estimateData.entries()));
+                updateEstimateDisplay();
+                
+                // Zeige Notification
+                if (estimateData.size > 0) {
+                    showBuzzerStatus(`🏁 Spiel beendet! ${estimateData.size} Schätzungen verfügbar`, 'success');
+                }
+            }
             break;
             
         case 'guessing_nextRound':
             console.log('🔄 Nächste Runde');
             estimateData.clear();
             updateEstimateDisplay();
+            break;
+            
+        case 'guessing_countdown':
+            console.log('⏱️ Countdown gestartet');
+            break;
+            
+        case 'guessing_timeSet':
+            console.log('⏱️ Zeit gesetzt:', data.time);
             break;
             
         default:
