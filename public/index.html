@@ -6269,11 +6269,12 @@ function handleBuzzerMessage(data) {
         case 'guessing_answer':
             // Einzelne Antwort empfangen (wird normalerweise nicht direkt gesendet)
             if (data.playerName && data.answer !== undefined) {
-                estimateData.set(data.playerName, parseFloat(data.answer) || 0);
-                console.log(`📊 ${data.playerName} schätzt: ${data.answer}`);
+                const answer = String(data.answer).trim();
+                estimateData.set(data.playerName, answer);
+                console.log(`📊 ${data.playerName} schätzt: ${answer}`);
                 console.log('💾 Aktuelle estimateData:', Array.from(estimateData.entries()));
                 updateEstimateDisplay();
-                showNewEstimateNotification(data.playerName, data.answer);
+                showNewEstimateNotification(data.playerName, answer);
             }
             break;
             
@@ -6320,11 +6321,10 @@ function handleBuzzerMessage(data) {
             if (data.results && Array.isArray(data.results)) {
                 data.results.forEach(result => {
                     if (result.name && result.answer) {
-                        // Entferne Komma und konvertiere zu Number
-                        const answer = result.answer.replace(',', '.');
-                        const estimate = parseFloat(answer) || 0;
-                        estimateData.set(result.name, estimate);
-                        console.log(`  ✅ Result: ${result.name} = ${estimate}`);
+                        // Speichere als String (kann Text oder Zahl sein)
+                        const answer = String(result.answer).trim();
+                        estimateData.set(result.name, answer);
+                        console.log(`  ✅ Result: ${result.name} = ${answer}`);
                     }
                 });
                 
@@ -6391,10 +6391,11 @@ function updatePlayerList(players) {
     players.forEach(player => {
         console.log(`  - ${player.name}: answered=${player.answered}, answer=${player.answer}`);
         if (player.answered && player.answer !== undefined && player.answer !== '') {
-            const estimate = parseFloat(player.answer) || 0;
-            estimateData.set(player.name, estimate);
+            // Speichere als String (kann Text oder Zahl sein)
+            const answer = String(player.answer).trim();
+            estimateData.set(player.name, answer);
             updatedCount++;
-            console.log(`    ✅ Gespeichert: ${player.name} = ${estimate}`);
+            console.log(`    ✅ Gespeichert: ${player.name} = ${answer}`);
         }
     });
     
@@ -6473,7 +6474,7 @@ function updateEstimateDisplay() {
                                 </div>
                             </div>
                             <div style="font-weight: 700; font-size: 1.3rem; color: #fbbf24;">
-                                ${estimate.toLocaleString('de-DE')}
+                                ${isNaN(estimate) ? estimate : parseFloat(estimate).toLocaleString('de-DE')}
                             </div>
                         </div>
                     `;
@@ -6499,7 +6500,7 @@ function updateEstimateDisplay() {
                             </div>
                         </div>
                         <div style="font-weight: 700; font-size: 1.5rem; color: #22c55e;">
-                            ${moderatorAnswer[1].toLocaleString('de-DE')}
+                            ${isNaN(moderatorAnswer[1]) ? moderatorAnswer[1] : parseFloat(moderatorAnswer[1]).toLocaleString('de-DE')}
                         </div>
                     </div>
                 ` : ''}
