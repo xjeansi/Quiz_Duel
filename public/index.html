@@ -2931,7 +2931,7 @@
                 werBinIchBuzzerWs.send(JSON.stringify({
                     type: 'join',
                     room: werBinIchRoomCode,
-                    name: 'QuizDisplay'
+                    playerName: 'JeansBot'  // KORREKT: playerName (nicht name!)
                 }));
             };
             
@@ -3029,6 +3029,12 @@
                 item.style.transform = '';
                 item.style.boxShadow = '';
             });
+            
+            // SPIEL FORTSETZEN (falls pausiert)
+            if (isPaused) {
+                pauseGame(); // Toggle Pause = Resume
+                console.log('▶️ Spiel fortgesetzt');
+            }
             
             // SENDE RESET AN BUZZER-APP
             if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
@@ -3289,7 +3295,8 @@
             if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
                 werBinIchBuzzerWs.send(JSON.stringify({
                     type: 'leave',
-                    room: werBinIchRoomCode
+                    room: werBinIchRoomCode,
+                    playerName: 'JeansBot'
                 }));
                 werBinIchBuzzerWs.close();
                 werBinIchBuzzerWs = null;
@@ -7063,7 +7070,8 @@
             if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
                 werBinIchBuzzerWs.send(JSON.stringify({
                     type: 'leave',
-                    room: werBinIchRoomCode
+                    room: werBinIchRoomCode,
+                    playerName: 'JeansBot'  // WICHTIG: playerName muss mit gesendet werden!
                 }));
                 werBinIchBuzzerWs.close();
                 werBinIchBuzzerWs = null;
