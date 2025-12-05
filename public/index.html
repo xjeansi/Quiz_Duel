@@ -2226,6 +2226,11 @@
         let isAudioPlaying = false;
         let audioUpdateInterval = null;
         let showSongName = false; // Kontrolliert ob Song-Name sichtbar ist
+        
+        // BUZZER INTEGRATION FÜR SPIEL 2
+        let cantinaBandBuzzerWs = null;
+        let cantinaBandRoomCode = 'CANTINABAND';
+        let cantinaBandBuzzedPlayer = null;
 
         function openCantinaBand() {
             const modal = document.getElementById('gameModal');
@@ -2343,27 +2348,44 @@
             const modalBody = document.getElementById('modalBody');
             modalBody.innerHTML = `
                 <div style="display: flex; gap: 20px; height: 100%; min-height: 700px;">
-                    <div style="width: 350px; display: flex; flex-direction: column; gap: 15px;">
-                        <div class="info-card">
-                            <h3 style="margin-bottom: 15px; font-size: 1.3rem;">📊 Spielinfo</h3>
-                            <div class="info-row">
+                    <div style="width: 350px; display: flex; flex-direction: column; gap: 10px;">
+                        <div class="info-card" style="padding: 12px;">
+                            <h3 style="margin-bottom: 8px; font-size: 1rem;">📊 Spielinfo</h3>
+                            <div class="info-row" style="font-size: 0.85rem;">
                                 <span class="info-label">Runde:</span>
                                 <span class="info-value" id="currentAudioRound">1</span> / <span id="totalAudioRounds">${uploadedAudioFiles.length}</span>
                             </div>
-                        </div>
-                        <div class="info-card">
-                            <h3 style="margin-bottom: 15px; font-size: 1.3rem;">🎵 Steuerung</h3>
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                <button class="control-btn-full" onclick="playPauseAudio()" id="playPauseBtn">▶️ Play</button>
-                                <button class="control-btn-full" onclick="restartAudio()">⏮️ Von vorne</button>
-                                <button class="control-btn-full" onclick="toggleSongName()" id="toggleNameBtn" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5);">👁️ Name anzeigen</button>
-                                <button class="control-btn-full" onclick="skipAudioRound()">⏭️ Song überspringen</button>
-                                <button class="control-btn-full danger" onclick="endCantinaBand()">🏁 Spiel beenden</button>
+                            <div class="info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem;">
+                                <span class="info-label">🔔 Buzzer Room:</span>
+                                <span class="info-value" style="color: #fbbf24;">CANTINABAND</span>
                             </div>
                         </div>
-                        <div class="info-card">
-                            <h3 style="margin-bottom: 15px; font-size: 1.3rem;">👥 Spieler</h3>
-                            <div id="audioPlayersList" style="max-height: 300px; overflow-y: auto;"></div>
+                        
+                        <!-- BUZZER ANZEIGE -->
+                        <div class="info-card" id="cantinaBandBuzzerCard" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); padding: 12px;">
+                            <h3 style="margin-bottom: 8px; font-size: 1rem;">🔔 Buzzer</h3>
+                            <div id="cantinaBandBuzzerDisplay" style="text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px;">
+                                <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-bottom: 4px;">Warte auf Buzz...</div>
+                                <div id="cantinaBandBuzzerName" style="font-size: 1.2rem; font-weight: 700; color: #fbbf24; min-height: 25px;"></div>
+                            </div>
+                            <button class="control-btn-full" onclick="resetCantinaBandBuzzer()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 8px; font-size: 0.85rem;">
+                                🔄 Zurücksetzen
+                            </button>
+                        </div>
+                        
+                        <div class="info-card" style="padding: 12px;">
+                            <h3 style="margin-bottom: 8px; font-size: 1rem;">🎵 Steuerung</h3>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <button class="control-btn-full" onclick="playPauseAudio()" id="playPauseBtn" style="padding: 8px; font-size: 0.85rem;">▶️ Play</button>
+                                <button class="control-btn-full" onclick="restartAudio()" style="padding: 8px; font-size: 0.85rem;">⏮️ Von vorne</button>
+                                <button class="control-btn-full" onclick="toggleSongName()" id="toggleNameBtn" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5); padding: 8px; font-size: 0.85rem;">👁️ Name anzeigen</button>
+                                <button class="control-btn-full" onclick="skipAudioRound()" style="padding: 8px; font-size: 0.85rem;">⏭️ Song überspringen</button>
+                                <button class="control-btn-full danger" onclick="endCantinaBand()" style="padding: 8px; font-size: 0.85rem;">🏁 Spiel beenden</button>
+                            </div>
+                        </div>
+                        <div class="info-card" style="padding: 12px;">
+                            <h3 style="margin-bottom: 8px; font-size: 1rem;">👥 Spieler</h3>
+                            <div id="audioPlayersList"></div>
                         </div>
                     </div>
                     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative;">
@@ -2410,6 +2432,11 @@
             if (currentAudioIndex >= uploadedAudioFiles.length) {
                 showAudioFinalResults();
                 return;
+            }
+            
+            // VERBINDE MIT BUZZER (nur beim ersten Track)
+            if (currentAudioIndex === 0 && !cantinaBandBuzzerWs) {
+                connectCantinaBandBuzzer();
             }
             
             const track = uploadedAudioFiles[currentAudioIndex];
@@ -2574,6 +2601,18 @@
         }
 
         function showAudioFinalResults() {
+            // DISCONNECT VON BUZZER
+            if (cantinaBandBuzzerWs && cantinaBandBuzzerWs.readyState === 1) {
+                cantinaBandBuzzerWs.send(JSON.stringify({
+                    type: 'leave',
+                    room: cantinaBandRoomCode,
+                    playerName: 'JeansBot'
+                }));
+                cantinaBandBuzzerWs.close();
+                cantinaBandBuzzerWs = null;
+                console.log('🔌 Cantina Band Buzzer getrennt (Spiel beendet)');
+            }
+            
             if (audioElement) audioElement.pause();
             if (audioUpdateInterval) {
                 clearInterval(audioUpdateInterval);
@@ -2600,6 +2639,149 @@
             if (confirm('Möchtest du das Spiel wirklich beenden?')) {
                 showAudioFinalResults();
             }
+        }
+        
+        // ========================================
+        // CANTINA BAND BUZZER FUNKTIONEN
+        // ========================================
+        
+        function connectCantinaBandBuzzer() {
+            if (cantinaBandBuzzerWs && cantinaBandBuzzerWs.readyState === 1) {
+                console.log('Cantina Band Buzzer bereits verbunden');
+                return;
+            }
+            
+            cantinaBandBuzzerWs = new WebSocket('wss://jeans.up.railway.app');
+            
+            cantinaBandBuzzerWs.onopen = () => {
+                console.log('🔌 Cantina Band Buzzer verbunden!');
+                cantinaBandBuzzerWs.send(JSON.stringify({
+                    type: 'join',
+                    room: cantinaBandRoomCode,
+                    playerName: 'JeansBot'
+                }));
+            };
+            
+            cantinaBandBuzzerWs.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📩 Cantina Band Buzzer Nachricht:', JSON.stringify(data, null, 2));
+                    
+                    if (data.type === 'buzz') {
+                        const playerName = data.playerName || 'Unbekannt';
+                        cantinaBandBuzzedPlayer = playerName;
+                        console.log(`🔔 ${playerName} hat gebuzzert (Cantina Band)!`);
+                        
+                        // PAUSIERE AUDIO
+                        if (isAudioPlaying && audioElement) {
+                            audioElement.pause();
+                            isAudioPlaying = false;
+                            document.getElementById('playPauseBtn').textContent = '▶️ Play';
+                            document.getElementById('mainPlayBtn').textContent = '▶️';
+                            console.log('⏸️ Audio pausiert');
+                        }
+                        
+                        // Highlight Spieler
+                        highlightCantinaBandBuzzedPlayer(playerName);
+                    } else if (data.type === 'reset') {
+                        console.log('🔄 Reset von Buzzer-App empfangen');
+                        resetCantinaBandBuzzerDisplay();
+                    }
+                } catch (e) {
+                    console.error('Fehler beim Parsen der Cantina Band Buzzer-Nachricht:', e);
+                }
+            };
+            
+            cantinaBandBuzzerWs.onerror = (error) => {
+                console.error('Cantina Band Buzzer Fehler:', error);
+            };
+            
+            cantinaBandBuzzerWs.onclose = () => {
+                console.log('🔌 Cantina Band Buzzer getrennt');
+                cantinaBandBuzzerWs = null;
+            };
+        }
+        
+        function highlightCantinaBandBuzzedPlayer(playerName) {
+            // UPDATE BUZZER DISPLAY
+            const buzzerNameDisplay = document.getElementById('cantinaBandBuzzerName');
+            const buzzerCard = document.getElementById('cantinaBandBuzzerCard');
+            
+            if (buzzerNameDisplay) {
+                buzzerNameDisplay.textContent = `🔔 ${playerName}`;
+                buzzerCard.style.background = 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.3) 100%)';
+                buzzerCard.style.border = '2px solid #fbbf24';
+                buzzerCard.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.4)';
+            }
+            
+            // Highlight in Spielerliste
+            const container = document.getElementById('audioPlayersList');
+            const playerItems = container.querySelectorAll('.game-player-item');
+            
+            playerItems.forEach(item => {
+                const nameElement = item.querySelector('.game-player-name');
+                if (nameElement && nameElement.textContent === playerName) {
+                    item.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
+                    item.style.transform = 'scale(1.05)';
+                    item.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.5)';
+                }
+            });
+        }
+        
+        function resetCantinaBandBuzzer() {
+            // Display zurücksetzen
+            resetCantinaBandBuzzerDisplay();
+            
+            // SPIEL FORTSETZEN (Audio weiterspielen)
+            if (!isAudioPlaying && audioElement) {
+                audioElement.play();
+                isAudioPlaying = true;
+                document.getElementById('playPauseBtn').textContent = '⏸️ Pause';
+                document.getElementById('mainPlayBtn').textContent = '⏸️';
+                console.log('▶️ Audio fortgesetzt');
+            }
+            
+            // SENDE RESET AN SERVER
+            if (cantinaBandBuzzerWs && cantinaBandBuzzerWs.readyState === 1) {
+                try {
+                    cantinaBandBuzzerWs.send(JSON.stringify({
+                        type: 'reset',
+                        room: cantinaBandRoomCode
+                    }));
+                    console.log('📤 Reset an Server gesendet (Cantina Band)');
+                } catch (e) {
+                    console.error('❌ Fehler beim Senden von reset:', e);
+                }
+            }
+        }
+        
+        function resetCantinaBandBuzzerDisplay() {
+            cantinaBandBuzzedPlayer = null;
+            
+            const buzzerNameDisplay = document.getElementById('cantinaBandBuzzerName');
+            const buzzerCard = document.getElementById('cantinaBandBuzzerCard');
+            
+            if (buzzerNameDisplay) {
+                buzzerNameDisplay.textContent = '';
+            }
+            
+            if (buzzerCard) {
+                buzzerCard.style.background = 'rgba(251, 191, 36, 0.1)';
+                buzzerCard.style.border = '2px solid rgba(251, 191, 36, 0.3)';
+                buzzerCard.style.boxShadow = 'none';
+            }
+            
+            // Reset Player Highlights
+            const container = document.getElementById('audioPlayersList');
+            const playerItems = container.querySelectorAll('.game-player-item');
+            
+            playerItems.forEach(item => {
+                item.style.background = '';
+                item.style.transform = '';
+                item.style.boxShadow = '';
+            });
+            
+            console.log('🔄 Cantina Band Buzzer Display zurückgesetzt');
         }
 
         // Modal öffnen für "Wer zum Teufel bin ich?"
@@ -7071,11 +7253,23 @@
                 werBinIchBuzzerWs.send(JSON.stringify({
                     type: 'leave',
                     room: werBinIchRoomCode,
-                    playerName: 'JeansBot'  // WICHTIG: playerName muss mit gesendet werden!
+                    playerName: 'JeansBot'
                 }));
                 werBinIchBuzzerWs.close();
                 werBinIchBuzzerWs = null;
                 console.log('🔌 Wer bin ich Buzzer disconnected');
+            }
+            
+            // DISCONNECT CANTINA BAND BUZZER
+            if (cantinaBandBuzzerWs && cantinaBandBuzzerWs.readyState === 1) {
+                cantinaBandBuzzerWs.send(JSON.stringify({
+                    type: 'leave',
+                    room: cantinaBandRoomCode,
+                    playerName: 'JeansBot'
+                }));
+                cantinaBandBuzzerWs.close();
+                cantinaBandBuzzerWs = null;
+                console.log('🔌 Cantina Band Buzzer disconnected');
             }
             
             // Disconnect von Buzzer-App wenn verbunden (andere Spiele)
