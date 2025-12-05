@@ -2942,11 +2942,10 @@
                     
                     if (data.type === 'buzz') {
                         // Jemand hat gebuzzert!
-                        // Probiere alle möglichen Felder für den Namen
-                        const playerName = data.name || data.player || data.username || data.user || 'Unbekannt';
+                        // KORREKT: playerName ist das richtige Feld!
+                        const playerName = data.playerName || 'Unbekannt';
                         werBinIchBuzzedPlayer = playerName;
                         console.log(`🔔 ${playerName} hat gebuzzert!`);
-                        console.log('🔍 Verfügbare Felder:', Object.keys(data));
                         
                         // Pausiere das Spiel
                         if (!isPaused) {
@@ -2955,10 +2954,11 @@
                         
                         // Highlight Spieler
                         highlightBuzzedPlayer(playerName);
-                    } else if (data.type === 'unlocked' || data.type === 'enabled') {
-                        console.log('✅ Buzzer wurden entsperrt');
-                    } else if (data.type === 'error') {
-                        console.error('❌ Buzzer Fehler:', data.message);
+                    } else if (data.type === 'reset') {
+                        // Reset-Broadcast vom Server - alle Buzzer sind jetzt entsperrt
+                        console.log('✅ Reset-Broadcast empfangen - Buzzer entsperrt');
+                        // Nur Display zurücksetzen, NICHT neu senden
+                        resetWerBinIchBuzzerDisplay();
                     }
                 } catch (e) {
                     console.error('Fehler beim Parsen der Buzzer-Nachricht:', e);
@@ -3030,20 +3030,51 @@
                 item.style.boxShadow = '';
             });
             
-            // SENDE UNLOCK AN BUZZER-APP (ermöglicht wieder Buzzern)
+            // SENDE RESET AN BUZZER-APP
             if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
                 try {
                     werBinIchBuzzerWs.send(JSON.stringify({
-                        type: 'unlock',
+                        type: 'reset',
                         room: werBinIchRoomCode
                     }));
-                    console.log('📤 Unlock an Buzzer-App gesendet');
+                    console.log('📤 Reset an Buzzer-App gesendet');
                 } catch (e) {
-                    console.error('❌ Fehler beim Senden von unlock:', e);
+                    console.error('❌ Fehler beim Senden von reset:', e);
                 }
             }
             
             console.log('🔄 Buzzer zurückgesetzt');
+        }
+        
+        // NUR Display zurücksetzen (ohne WebSocket, für eingehende Reset-Messages)
+        function resetWerBinIchBuzzerDisplay() {
+            werBinIchBuzzedPlayer = null;
+            
+            // Reset Display
+            const buzzerNameDisplay = document.getElementById('werBinIchBuzzerName');
+            const buzzerCard = document.getElementById('werBinIchBuzzerCard');
+            
+            if (buzzerNameDisplay) {
+                buzzerNameDisplay.textContent = '';
+            }
+            
+            if (buzzerCard) {
+                buzzerCard.style.background = 'rgba(251, 191, 36, 0.1)';
+                buzzerCard.style.border = '2px solid rgba(251, 191, 36, 0.3)';
+                buzzerCard.style.boxShadow = 'none';
+            }
+            
+            // Reset Player Highlights
+            const container = document.getElementById('gamePlayersList');
+            const playerItems = container.querySelectorAll('.game-player-item');
+            
+            playerItems.forEach(item => {
+                item.style.background = '';
+                item.style.transform = '';
+                item.style.boxShadow = '';
+            });
+            
+            console.log('🔄 Buzzer Display zurückgesetzt');
         }
 
         // Spielerliste im Spiel aktualisieren
