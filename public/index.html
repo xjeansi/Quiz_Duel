@@ -2938,13 +2938,15 @@
             werBinIchBuzzerWs.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('📩 Buzzer Nachricht:', data);
+                    console.log('📩 Buzzer Nachricht (komplett):', JSON.stringify(data, null, 2));
                     
                     if (data.type === 'buzz') {
                         // Jemand hat gebuzzert!
-                        const playerName = data.player || data.name || 'Unbekannt';
+                        // Probiere alle möglichen Felder für den Namen
+                        const playerName = data.name || data.player || data.username || data.user || 'Unbekannt';
                         werBinIchBuzzedPlayer = playerName;
                         console.log(`🔔 ${playerName} hat gebuzzert!`);
+                        console.log('🔍 Verfügbare Felder:', Object.keys(data));
                         
                         // Pausiere das Spiel
                         if (!isPaused) {
@@ -2953,6 +2955,10 @@
                         
                         // Highlight Spieler
                         highlightBuzzedPlayer(playerName);
+                    } else if (data.type === 'unlocked' || data.type === 'enabled') {
+                        console.log('✅ Buzzer wurden entsperrt');
+                    } else if (data.type === 'error') {
+                        console.error('❌ Buzzer Fehler:', data.message);
                     }
                 } catch (e) {
                     console.error('Fehler beim Parsen der Buzzer-Nachricht:', e);
@@ -3024,13 +3030,17 @@
                 item.style.boxShadow = '';
             });
             
-            // SENDE ENABLE (nicht reset!) AN BUZZER-APP
+            // SENDE UNLOCK AN BUZZER-APP (ermöglicht wieder Buzzern)
             if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
-                werBinIchBuzzerWs.send(JSON.stringify({
-                    type: 'enable',
-                    room: werBinIchRoomCode
-                }));
-                console.log('📤 Enable an Buzzer-App gesendet');
+                try {
+                    werBinIchBuzzerWs.send(JSON.stringify({
+                        type: 'unlock',
+                        room: werBinIchRoomCode
+                    }));
+                    console.log('📤 Unlock an Buzzer-App gesendet');
+                } catch (e) {
+                    console.error('❌ Fehler beim Senden von unlock:', e);
+                }
             }
             
             console.log('🔄 Buzzer zurückgesetzt');
