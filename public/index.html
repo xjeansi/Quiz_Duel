@@ -2953,10 +2953,6 @@
                         
                         // Highlight Spieler
                         highlightBuzzedPlayer(playerName);
-                    } else if (data.type === 'reset') {
-                        // Reset von Buzzer-App empfangen
-                        console.log('🔄 Reset von Buzzer-App empfangen');
-                        resetWerBinIchBuzzer();
                     }
                 } catch (e) {
                     console.error('Fehler beim Parsen der Buzzer-Nachricht:', e);
@@ -3028,13 +3024,13 @@
                 item.style.boxShadow = '';
             });
             
-            // SENDE RESET AN BUZZER-APP
+            // SENDE ENABLE (nicht reset!) AN BUZZER-APP
             if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
                 werBinIchBuzzerWs.send(JSON.stringify({
-                    type: 'reset',
+                    type: 'enable',
                     room: werBinIchRoomCode
                 }));
-                console.log('📤 Reset an Buzzer-App gesendet');
+                console.log('📤 Enable an Buzzer-App gesendet');
             }
             
             console.log('🔄 Buzzer zurückgesetzt');
@@ -7022,7 +7018,18 @@
             const modal = document.getElementById('gameModal');
             modal.classList.remove('active');
             
-            // Disconnect von Buzzer-App wenn verbunden
+            // DISCONNECT WER BIN ICH BUZZER
+            if (werBinIchBuzzerWs && werBinIchBuzzerWs.readyState === 1) {
+                werBinIchBuzzerWs.send(JSON.stringify({
+                    type: 'leave',
+                    room: werBinIchRoomCode
+                }));
+                werBinIchBuzzerWs.close();
+                werBinIchBuzzerWs = null;
+                console.log('🔌 Wer bin ich Buzzer disconnected');
+            }
+            
+            // Disconnect von Buzzer-App wenn verbunden (andere Spiele)
             if (typeof disconnectBuzzerApp === 'function') {
                 disconnectBuzzerApp();
                 console.log('🔌 QuizDisplay disconnected beim Schließen');
