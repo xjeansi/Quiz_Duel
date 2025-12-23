@@ -3033,11 +3033,8 @@
         }
 
         function handleFiles(files) {
-            if (uploadedImages.length + files.length > 10) {
-                alert('Du kannst maximal 10 Bilder hochladen!');
-                return;
-            }
-
+            // KEIN LIMIT MEHR - Beliebig viele Bilder möglich!
+            
             Array.from(files).forEach(file => {
                 if (file.type.startsWith('image/')) {
                     const reader = new FileReader();
@@ -3353,6 +3350,9 @@
 
             // Prüfe ob Runde vorbei ist
             if (timeRemaining <= 0) {
+                // BILD BLEIBT KLAR (progress = 1)
+                drawImageWithEffect(ctx, img, currentEffect, 1);
+                
                 // Zeige Overlay und warte auf Benutzer-Eingabe
                 document.getElementById('roundCompleteOverlay').classList.add('active');
                 if (animationFrameId) {
