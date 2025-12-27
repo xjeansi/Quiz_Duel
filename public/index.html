@@ -6991,6 +6991,11 @@
         function showEstimateWinnerSelection() {
             const modalBody = document.getElementById('modalBody');
             
+            // Debug-Ausgabe
+            console.log('🔍 Winner Selection geöffnet');
+            console.log('📊 estimateData:', typeof estimateData !== 'undefined' ? Array.from(estimateData.entries()) : 'undefined');
+            console.log('👥 estimatePlayers:', estimatePlayers);
+            
             // Hole Moderator-Antwort und Spieler-Schätzungen
             let moderatorAnswer = null;
             let playerEstimates = [];
@@ -6999,11 +7004,14 @@
                 // Hole Moderator-Antwort
                 if (estimateData.has('Moderator')) {
                     moderatorAnswer = parseFloat(estimateData.get('Moderator'));
+                    console.log('✅ Moderator-Antwort gefunden:', moderatorAnswer);
+                } else {
+                    console.warn('⚠️ Moderator-Antwort nicht gefunden. Vorhandene Spieler:', Array.from(estimateData.keys()));
                 }
                 
                 // Sammle alle Spieler-Schätzungen (außer Moderator)
                 estimatePlayers.forEach((player, index) => {
-                    if (estimateData.has(player.name)) {
+                    if (player.name !== 'Moderator' && estimateData.has(player.name)) {
                         const estimate = parseFloat(estimateData.get(player.name));
                         const difference = moderatorAnswer !== null ? Math.abs(estimate - moderatorAnswer) : null;
                         
@@ -7013,6 +7021,8 @@
                             estimate: estimate,
                             difference: difference
                         });
+                        
+                        console.log(`✅ Schätzung von ${player.name}: ${estimate}, Abstand: ${difference}`);
                     }
                 });
                 
@@ -7020,6 +7030,10 @@
                 if (moderatorAnswer !== null) {
                     playerEstimates.sort((a, b) => a.difference - b.difference);
                 }
+                
+                console.log('📊 Spieler-Schätzungen sortiert:', playerEstimates);
+            } else {
+                console.warn('⚠️ estimateData ist leer oder nicht vorhanden');
             }
             
             // Zeige Vergleichs-Übersicht
@@ -7091,8 +7105,11 @@
                             ` : `
                                 <div style="text-align: center; padding: 40px; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 16px; margin-bottom: 30px;">
                                     <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
-                                    <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9);">
+                                    <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
                                         Keine Spieler-Schätzungen vorhanden
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.6);">
+                                        Spieler müssen ihre Schätzungen in der Buzzer-App eingeben (Room: QUIZ)
                                     </div>
                                 </div>
                             `}
@@ -7112,9 +7129,9 @@
                             <h3 style="font-size: 1.3rem; margin-bottom: 20px; color: #ffffff; text-align: center;">
                                 👆 Wähle den Gewinner manuell aus:
                             </h3>
-                            <div class="winner-players">
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; max-width: 600px; margin: 0 auto;">
                                 ${estimatePlayers.map((player, index) => `
-                                    <button class="winner-player-btn" onclick="selectEstimateWinner(${index})">
+                                    <button class="winner-player-btn" onclick="selectEstimateWinner(${index})" style="min-width: 180px;">
                                         ${player.name}
                                     </button>
                                 `).join('')}
