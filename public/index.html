@@ -6995,6 +6995,7 @@
             console.log('🔍 Winner Selection geöffnet');
             console.log('📊 estimateData:', typeof estimateData !== 'undefined' ? Array.from(estimateData.entries()) : 'undefined');
             console.log('👥 estimatePlayers:', estimatePlayers);
+            console.log('📋 estimatePlayers Namen:', estimatePlayers.map(p => p.name));
             
             // Hole Moderator-Antwort und Spieler-Schätzungen
             let moderatorAnswer = null;
@@ -7006,23 +7007,26 @@
                     moderatorAnswer = parseFloat(estimateData.get('Moderator'));
                     console.log('✅ Moderator-Antwort gefunden:', moderatorAnswer);
                 } else {
-                    console.warn('⚠️ Moderator-Antwort nicht gefunden. Vorhandene Spieler:', Array.from(estimateData.keys()));
+                    console.warn('⚠️ Moderator-Antwort nicht gefunden. Vorhandene Spieler in estimateData:', Array.from(estimateData.keys()));
                 }
                 
-                // Sammle alle Spieler-Schätzungen (außer Moderator)
-                estimatePlayers.forEach((player, index) => {
-                    if (player.name !== 'Moderator' && estimateData.has(player.name)) {
-                        const estimate = parseFloat(estimateData.get(player.name));
+                // WICHTIG: Hole ALLE Schätzungen aus estimateData (nicht nur die aus estimatePlayers!)
+                Array.from(estimateData.entries()).forEach(([name, answer]) => {
+                    if (name !== 'Moderator' && name !== 'QuizDisplay') {
+                        const estimate = parseFloat(answer);
                         const difference = moderatorAnswer !== null ? Math.abs(estimate - moderatorAnswer) : null;
                         
+                        // Finde Index in estimatePlayers (wenn vorhanden)
+                        const playerIndex = estimatePlayers.findIndex(p => p.name === name);
+                        
                         playerEstimates.push({
-                            index: index,
-                            name: player.name,
+                            index: playerIndex >= 0 ? playerIndex : -1,
+                            name: name,
                             estimate: estimate,
                             difference: difference
                         });
                         
-                        console.log(`✅ Schätzung von ${player.name}: ${estimate}, Abstand: ${difference}`);
+                        console.log(`✅ Schätzung von ${name}: ${estimate}, Abstand: ${difference}, Index: ${playerIndex}`);
                     }
                 });
                 
