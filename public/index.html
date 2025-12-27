@@ -6991,23 +6991,140 @@
         function showEstimateWinnerSelection() {
             const modalBody = document.getElementById('modalBody');
             
+            // Hole Moderator-Antwort und Spieler-Schätzungen
+            let moderatorAnswer = null;
+            let playerEstimates = [];
+            
+            if (typeof estimateData !== 'undefined' && estimateData.size > 0) {
+                // Hole Moderator-Antwort
+                if (estimateData.has('Moderator')) {
+                    moderatorAnswer = parseFloat(estimateData.get('Moderator'));
+                }
+                
+                // Sammle alle Spieler-Schätzungen (außer Moderator)
+                estimatePlayers.forEach((player, index) => {
+                    if (estimateData.has(player.name)) {
+                        const estimate = parseFloat(estimateData.get(player.name));
+                        const difference = moderatorAnswer !== null ? Math.abs(estimate - moderatorAnswer) : null;
+                        
+                        playerEstimates.push({
+                            index: index,
+                            name: player.name,
+                            estimate: estimate,
+                            difference: difference
+                        });
+                    }
+                });
+                
+                // Sortiere nach Differenz (kleinste zuerst = am nächsten dran)
+                if (moderatorAnswer !== null) {
+                    playerEstimates.sort((a, b) => a.difference - b.difference);
+                }
+            }
+            
+            // Zeige Vergleichs-Übersicht
             modalBody.innerHTML = `
                 <div style="display: flex; align-items: center; justify-content: center; min-height: 700px; padding: 40px;">
-                    <div style="max-width: 800px; width: 100%;">
-                        <div class="winner-title" style="margin-bottom: 30px;">🏆 Wer hat Runde ${estimateCurrentRound} gewonnen?</div>
-                        
-                        <div class="winner-players">
-                            ${estimatePlayers.map((player, index) => `
-                                <button class="winner-player-btn" onclick="selectEstimateWinner(${index})">
-                                    ${player.name}
-                                </button>
-                            `).join('')}
+                    <div style="max-width: 1000px; width: 100%;">
+                        <div class="winner-title" style="margin-bottom: 30px;">
+                            🏆 Runde ${estimateCurrentRound} - Gewinner auswählen
                         </div>
+                        
+                        ${moderatorAnswer !== null ? `
+                            <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%); border: 2px solid rgba(34, 197, 94, 0.4); border-radius: 16px;">
+                                <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.8); margin-bottom: 8px;">
+                                    💡 Richtige Antwort (Moderator)
+                                </div>
+                                <div style="font-size: 3rem; font-weight: 700; color: #22c55e;">
+                                    ${moderatorAnswer}
+                                </div>
+                            </div>
+                            
+                            ${playerEstimates.length > 0 ? `
+                                <div style="margin-bottom: 30px;">
+                                    <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: #ffffff; text-align: center;">
+                                        📊 Spieler-Schätzungen (sortiert nach Genauigkeit)
+                                    </h3>
+                                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                                        ${playerEstimates.map((player, rank) => {
+                                            const isClosest = rank === 0;
+                                            const medals = ['🥇', '🥈', '🥉'];
+                                            const medal = rank < 3 ? medals[rank] : `${rank + 1}.`;
+                                            
+                                            return `
+                                                <div style="
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: space-between;
+                                                    padding: 20px 25px;
+                                                    background: ${isClosest ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%)' : 'rgba(255, 255, 255, 0.05)'};
+                                                    border: 2px solid ${isClosest ? '#7c3aed' : 'rgba(255, 255, 255, 0.1)'};
+                                                    border-radius: 12px;
+                                                    transition: all 0.3s ease;
+                                                ">
+                                                    <div style="display: flex; align-items: center; gap: 20px; flex: 1;">
+                                                        <div style="font-size: 1.8rem; min-width: 50px;">
+                                                            ${medal}
+                                                        </div>
+                                                        <div style="flex: 1;">
+                                                            <div style="font-size: 1.3rem; font-weight: 600; color: #ffffff; margin-bottom: 4px;">
+                                                                ${player.name}
+                                                            </div>
+                                                            <div style="font-size: 0.95rem; color: rgba(255, 255, 255, 0.6);">
+                                                                Schätzung: <span style="color: #60a5fa; font-weight: 600;">${player.estimate}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="text-align: right;">
+                                                        <div style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 4px;">
+                                                            Abstand
+                                                        </div>
+                                                        <div style="font-size: 1.8rem; font-weight: 700; color: ${isClosest ? '#22c55e' : '#f59e0b'};">
+                                                            ${player.difference.toFixed(0)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            ` : `
+                                <div style="text-align: center; padding: 40px; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 16px; margin-bottom: 30px;">
+                                    <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
+                                    <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9);">
+                                        Keine Spieler-Schätzungen vorhanden
+                                    </div>
+                                </div>
+                            `}
+                        ` : `
+                            <div style="text-align: center; padding: 40px; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 16px; margin-bottom: 30px;">
+                                <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
+                                <div style="font-size: 1.3rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
+                                    Keine Moderator-Antwort gefunden!
+                                </div>
+                                <div style="font-size: 1rem; color: rgba(255, 255, 255, 0.7);">
+                                    Der Moderator muss sich als "Moderator" einloggen und eine Schätzung abgeben.
+                                </div>
+                            </div>
+                        `}
+                        
+                        <div style="margin-top: 40px;">
+                            <h3 style="font-size: 1.3rem; margin-bottom: 20px; color: #ffffff; text-align: center;">
+                                👆 Wähle den Gewinner manuell aus:
+                            </h3>
+                            <div class="winner-players">
+                                ${estimatePlayers.map((player, index) => `
+                                    <button class="winner-player-btn" onclick="selectEstimateWinner(${index})">
+                                        ${player.name}
+                                    </button>
+                                `).join('')}
+                            </div>
 
-                        <div style="text-align: center; margin-top: 30px;">
-                            <button class="no-winner-btn" onclick="selectEstimateWinner(null)">
-                                Niemand hat gewonnen
-                            </button>
+                            <div style="text-align: center; margin-top: 30px;">
+                                <button class="no-winner-btn" onclick="selectEstimateWinner(null)">
+                                    Niemand hat gewonnen
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
